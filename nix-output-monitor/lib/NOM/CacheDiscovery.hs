@@ -48,7 +48,7 @@ resolveWith manager pollState nomState = do
   newPollers <- STM.atomically do
     current <- STM.readTVar pollState
     let newOnes = proxyCandidates nomState `Set.difference` current.startedPollers
-    when (not (Set.null newOnes)) do
+    unless (Set.null newOnes) do
       STM.modifyTVar' pollState \old -> old{startedPollers = old.startedPollers <> newOnes}
     pure newOnes
   forM_ (Set.toList newPollers) \base -> void $ Concurrent.forkIO (pollLoop manager pollState base)
