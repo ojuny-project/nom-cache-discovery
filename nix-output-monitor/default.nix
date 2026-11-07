@@ -1,6 +1,7 @@
 { mkDerivation, ansi-terminal, async, attoparsec, base, bytestring
 , cassava, containers, directory, doctest-parallel, extra, filelock
-, filepath, fsnotify, hermes-json, HUnit, lib, nix-derivation
+, filepath, fsnotify, hermes-json, http-client, http-client-tls, HUnit, lib
+, nix-derivation
 , optics, random, relude, safe, safe-exceptions, stm, streamly-core
 , strict, template-haskell, terminal-size, text, time, transformers
 , typed-process, unix, word8
@@ -13,13 +14,15 @@ mkDerivation {
   isExecutable = true;
   libraryHaskellDepends = [
     ansi-terminal async attoparsec base bytestring cassava containers
-    directory extra filelock filepath fsnotify hermes-json
+    directory extra filelock filepath fsnotify hermes-json http-client
+    http-client-tls
     nix-derivation optics relude safe safe-exceptions stm streamly-core
     strict template-haskell terminal-size text time transformers word8
   ];
   executableHaskellDepends = [
     ansi-terminal async attoparsec base bytestring cassava containers
-    directory extra filelock filepath fsnotify hermes-json
+    directory extra filelock filepath fsnotify hermes-json http-client
+    http-client-tls
     nix-derivation optics relude safe safe-exceptions stm streamly-core
     strict template-haskell terminal-size text time transformers
     typed-process unix word8
@@ -27,7 +30,8 @@ mkDerivation {
   testHaskellDepends = [
     ansi-terminal async attoparsec base bytestring cassava containers
     directory doctest-parallel extra filelock filepath fsnotify
-    hermes-json HUnit nix-derivation optics random relude safe
+    hermes-json http-client http-client-tls HUnit nix-derivation optics random
+    relude safe
     safe-exceptions stm streamly-core strict template-haskell
     terminal-size text time transformers typed-process word8
   ];

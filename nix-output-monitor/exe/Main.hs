@@ -9,6 +9,7 @@ import Data.Text.IO (hPutStrLn)
 import Data.Time (ZonedTime)
 import Data.Version (showVersion)
 import GHC.IO.Exception (ExitCode (ExitFailure))
+import NOM.CacheDiscovery qualified as CacheDiscovery
 import NOM.Error (NOMError)
 import NOM.IO (interact)
 import NOM.IO.Input (NOMInput (..), UpdateResult (..), inputStream)
@@ -184,8 +185,13 @@ monitorHandle update config input_handle = withParser \streamParser -> do
 
       current_system <- Exception.handle ((Nothing <$) . printIOException) $ Just . decodeUtf8 <$> Process.readProcessStdout_ (Process.proc "nix" ["eval", "--extra-experimental-features", "nix-command", "--impure", "--raw", "--expr", "builtins.currentSystem"])
       first_state <- initialStateFromBuildPlatform current_system
+      resolver <- CacheDiscovery.newResolver
       let first_process_state = MkProcessState first_state (stateToText config first_state)
-      interact @update config streamParser (processStateUpdater config) (\now -> #updaterState %~ maintainState now) (.printFunction) (finalizer config) (inputStream update input_handle) outputHandle first_process_state
+          resolveProcessState processState = do
+            resolved_state <- resolver processState.updaterState
+            pure processState{updaterState = resolved_state}
+          printer processState = stateToText config processState.updaterState
+      interact @update config streamParser (processStateUpdater config) (\now -> #updaterState %~ maintainState now) resolveProcessState printer (finalizer config) (inputStream update input_handle) outputHandle first_process_state
       `Exception.finally` do
         Terminal.hShowCursor outputHandle
         ByteString.hPut outputHandle "\n" -- We print a new line after finish, because in normal nom state the last line is not empty.

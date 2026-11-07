@@ -74,6 +74,8 @@ common common-config
     filepath,
     fsnotify,
     hermes-json >=0.6.0.0,
+    http-client,
+    http-client-tls,
     nix-derivation,
     optics,
     relude,
@@ -115,6 +117,8 @@ library
   exposed-modules:
     Data.Sequence.Strict
     NOM.Builds
+    NOM.CacheDiscovery
+    NOM.CacheDiscovery.SourceMap
     NOM.Error
     NOM.IO
     NOM.IO.Input
@@ -190,3 +194,9 @@ test-suite doc-tests
   hs-source-dirs: test
   type: exitcode-stdio-1.0
   main-is: DocTests.hs
+
+test-suite cache-discovery-tests
+  import: tests
+  hs-source-dirs: test
+  type: exitcode-stdio-1.0
+  main-is: CacheDiscoveryTests.hs

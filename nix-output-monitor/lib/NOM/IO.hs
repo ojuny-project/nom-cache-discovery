@@ -72,10 +72,11 @@ writeStateToScreen ::
   TVar [ByteString] ->
   TVar Bool ->
   (Double -> state -> state) ->
+  (state -> IO state) ->
   OutputFunc state ->
   Handle ->
   IO ()
-writeStateToScreen pad printed_lines_var nom_state_var nix_output_buffer_var refresh_display_var maintenance printer output_handle = do
+writeStateToScreen pad printed_lines_var nom_state_var nix_output_buffer_var refresh_display_var maintenance resolve printer output_handle = do
   nowClock <- getZonedTime
   now <- getNow
   terminalSize <-
@@ -99,10 +100,12 @@ writeStateToScreen pad printed_lines_var nom_state_var nix_output_buffer_var ref
     pure (nom_state, nix_output_raw)
   -- ====
 
+  resolved_state <- resolve nom_state
+
   let nix_output = ByteString.lines $ ByteString.concat $ reverse nix_output_raw
       nix_output_length = length nix_output
 
-      nom_output = ByteString.lines $ encodeUtf8 $ truncateOutput terminalSize (printer nom_state terminalSize (nowClock, now))
+      nom_output = ByteString.lines $ encodeUtf8 $ truncateOutput terminalSize (printer resolved_state terminalSize (nowClock, now))
       nom_output_length = length nom_output
 
       -- We will try to calculate how many lines we can draw without reaching the end
@@ -204,14 +207,15 @@ interact ::
   StreamParser update ->
   UpdateFunc update state ->
   (Double -> state -> state) ->
+  (state -> IO state) ->
   OutputFunc state ->
   Finalizer state ->
   Stream (Either NOMError ByteString) ->
   Handle ->
   state ->
   IO state
-interact config parser updater maintenance printer finalize input_stream output_handle initialState =
-  processTextStream config parser updater maintenance (Just (printer, output_handle)) finalize initialState input_stream
+interact config parser updater maintenance resolve printer finalize input_stream output_handle initialState =
+  processTextStream config parser updater maintenance resolve (Just (printer, output_handle)) finalize initialState input_stream
 
 -- frame durations are passed to threadDelay and thus are given in microseconds
 
@@ -255,12 +259,13 @@ processTextStream ::
   StreamParser update ->
   UpdateFunc update state ->
   (Double -> state -> state) ->
+  (state -> IO state) ->
   Maybe (OutputFunc state, Handle) ->
   Finalizer state ->
   state ->
   Stream (Either NOMError ByteString) ->
   IO state
-processTextStream config parser updater maintenance printerMay finalize initialState inputStream = do
+processTextStream config parser updater maintenance resolve printerMay finalize initialState inputStream = do
   state_var <- newTMVarIO initialState
   output_builder_var <- newTVarIO []
   refresh_display_var <- newTVarIO False
@@ -285,6 +290,7 @@ processTextStream config parser updater maintenance printerMay finalize initialS
               output_builder_var
               refresh_display_var
               maintenance
+              resolve
               printer
               output_handle
           keepPrinting :: IO ()
