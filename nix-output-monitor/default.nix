@@ -1,10 +1,10 @@
 { mkDerivation, ansi-terminal, async, attoparsec, base, bytestring
 , cassava, containers, directory, doctest-parallel, extra, filelock
-, filepath, fsnotify, hermes-json, http-client, http-client-tls, HUnit, lib
-, nix-derivation
-, optics, random, relude, safe, safe-exceptions, stm, streamly-core
-, strict, template-haskell, terminal-size, text, time, transformers
-, typed-process, unix, word8
+, filepath, fsnotify, hermes-json, http-client, http-client-tls
+, HUnit, lib, nix-derivation, optics, random, relude, safe
+, safe-exceptions, stm, streamly-core, strict, template-haskell
+, terminal-size, text, time, transformers, typed-process, unix
+, word8
 }:
 mkDerivation {
   pname = "nix-output-monitor";
@@ -15,25 +15,24 @@ mkDerivation {
   libraryHaskellDepends = [
     ansi-terminal async attoparsec base bytestring cassava containers
     directory extra filelock filepath fsnotify hermes-json http-client
-    http-client-tls
-    nix-derivation optics relude safe safe-exceptions stm streamly-core
-    strict template-haskell terminal-size text time transformers word8
+    http-client-tls nix-derivation optics relude safe safe-exceptions
+    stm streamly-core strict template-haskell terminal-size text time
+    transformers word8
   ];
   executableHaskellDepends = [
     ansi-terminal async attoparsec base bytestring cassava containers
     directory extra filelock filepath fsnotify hermes-json http-client
-    http-client-tls
-    nix-derivation optics relude safe safe-exceptions stm streamly-core
-    strict template-haskell terminal-size text time transformers
-    typed-process unix word8
+    http-client-tls nix-derivation optics relude safe safe-exceptions
+    stm streamly-core strict template-haskell terminal-size text time
+    transformers typed-process unix word8
   ];
   testHaskellDepends = [
     ansi-terminal async attoparsec base bytestring cassava containers
     directory doctest-parallel extra filelock filepath fsnotify
-    hermes-json http-client http-client-tls HUnit nix-derivation optics random
-    relude safe
-    safe-exceptions stm streamly-core strict template-haskell
-    terminal-size text time transformers typed-process word8
+    hermes-json http-client http-client-tls HUnit nix-derivation optics
+    random relude safe safe-exceptions stm streamly-core strict
+    template-haskell terminal-size text time transformers typed-process
+    word8
   ];
   homepage = "https://code.maralorn.de/maralorn/nix-output-monitor";
   description = "Processes output of Nix commands to show helpful and pretty information";

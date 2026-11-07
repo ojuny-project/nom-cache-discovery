@@ -7,10 +7,10 @@ import Data.ByteString.Lazy qualified as LazyByteString
 import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
 import Data.Text qualified as Text
-import Network.HTTP.Client (Manager, httpLbs, managerResponseTimeout, managerSetProxy, newManager, noProxy, parseRequest, responseBody, responseTimeoutMicro)
-import Network.HTTP.Client.TLS (tlsManagerSettings)
 import NOM.CacheDiscovery.SourceMap (SourceMap, parseSourceMap, proxyCandidates, rewriteState)
 import NOM.State (NOMState)
+import Network.HTTP.Client (Manager, httpLbs, managerResponseTimeout, managerSetProxy, newManager, noProxy, parseRequest, responseBody, responseTimeoutMicro)
+import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Relude
 
 data PollState = MkPollState
