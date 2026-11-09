@@ -147,4 +147,3 @@ Right now nom uses four sources of information:
 * nix-output-monitor receives most its information from parsing nix-build output. The parser might be too strict or too loose for use cases I didn‘t think of. Then **the numbers displayed will be off**!
 * nix-build does not show information when a download or upload is finished, so we currently cannot differentiate between started and completed downloads.
 * For completed build detection we assume that every derivation has an output called "out".
-
