@@ -1,12 +1,13 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
+
 module Main (main) where
 
 import Control.Concurrent qualified as Concurrent
 import Control.Concurrent.STM qualified as STM
 import Control.Exception qualified as Exception
 import Data.ByteString qualified as ByteString
-import Data.Char (isAlphaNum)
 import Data.ByteString.Char8 qualified as ByteString8
+import Data.Char (isAlphaNum)
 import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
 import Data.Strict qualified as Strict
@@ -44,16 +45,16 @@ import System.IO qualified as SystemIO
 import System.IO.Unsafe qualified as UnsafeIO
 import System.Posix.IO qualified as Posix
 -- INVENTORY: package.4.4
-import Test.HUnit
-  ( Counts (errors, failures),
-    Test,
-    Testable (test),
-    assertBool,
-    assertEqual,
-    assertFailure,
-    runTestTT,
-    (~:),
-  )
+import Test.HUnit (
+  Counts (errors, failures),
+  Test,
+  Testable (test),
+  assertBool,
+  assertEqual,
+  assertFailure,
+  runTestTT,
+  (~:),
+ )
 
 hashPart :: Text
 hashPart = "0123456789abcdef0123456789abcdef"
@@ -91,16 +92,16 @@ addRunning host hashText state =
       path = StorePath hashText "example"
       transferInfo =
         MkTransferInfo
-          { host = host,
-            start = 0,
-            activityId = Strict.Nothing,
-            end = ()
+          { host = host
+          , start = 0
+          , activityId = Strict.Nothing
+          , end = ()
           }
       summary = state.fullSummary
-      newSummary = summary {runningDownloads = CMap.insert pathId transferInfo summary.runningDownloads}
+      newSummary = summary{runningDownloads = CMap.insert pathId transferInfo summary.runningDownloads}
    in state
-        { storePathInfos = CMap.insert pathId (MkStorePathInfo path mempty Strict.Nothing mempty) state.storePathInfos,
-          fullSummary = newSummary
+        { storePathInfos = CMap.insert pathId (MkStorePathInfo path mempty Strict.Nothing mempty) state.storePathInfos
+        , fullSummary = newSummary
         }
 
 addCompleted :: Host WithContext -> Text -> NOMState -> NOMState
@@ -109,16 +110,16 @@ addCompleted host hashText state =
       path = StorePath hashText "example"
       transferInfo =
         MkTransferInfo
-          { host = host,
-            start = 0,
-            activityId = Strict.Nothing,
-            end = Strict.Just 1.0
+          { host = host
+          , start = 0
+          , activityId = Strict.Nothing
+          , end = Strict.Just 1.0
           }
       summary = state.fullSummary
-      newSummary = summary {completedDownloads = CMap.insert pathId transferInfo summary.completedDownloads}
+      newSummary = summary{completedDownloads = CMap.insert pathId transferInfo summary.completedDownloads}
    in state
-        { storePathInfos = CMap.insert pathId (MkStorePathInfo path mempty Strict.Nothing mempty) state.storePathInfos,
-          fullSummary = newSummary
+        { storePathInfos = CMap.insert pathId (MkStorePathInfo path mempty Strict.Nothing mempty) state.storePathInfos
+        , fullSummary = newSummary
         }
 
 stateWithDownloads :: [(Host WithContext, Text)] -> IO NOMState
@@ -134,24 +135,24 @@ hostOf pathId state = fmap (.host) (CMap.lookup pathId state.fullSummary.running
 
 awaitHosts :: (NOMState -> IO NOMState) -> NOMState -> [(StorePathId, Host WithContext)] -> IO NOMState
 awaitHosts resolve state expectations = go (0 :: Int)
-  where
-    go attempt = do
-      resolved <- resolve state
-      let satisfied = all (\(pathId, expected) -> hostOf pathId resolved == Just expected) expectations
-      if satisfied || attempt >= 100
-        then pure resolved
-        else do
-          Concurrent.threadDelay 20_000
-          go (attempt + 1)
+ where
+  go attempt = do
+    resolved <- resolve state
+    let satisfied = all (\(pathId, expected) -> hostOf pathId resolved == Just expected) expectations
+    if satisfied || attempt >= 100
+      then pure resolved
+      else do
+        Concurrent.threadDelay 20_000
+        go (attempt + 1)
 
 waitForRequestCount :: Stub -> Int -> IO ()
 waitForRequestCount stub expected = go (0 :: Int)
-  where
-    go attempt = do
-      requests <- stub.stubLog
-      when (length requests < expected && attempt < 200) do
-        Concurrent.threadDelay 10_000
-        go (attempt + 1)
+ where
+  go attempt = do
+    requests <- stub.stubLog
+    when (length requests < expected && attempt < 200) do
+      Concurrent.threadDelay 10_000
+      go (attempt + 1)
 
 infoRequests :: Stub -> IO [(Double, Text)]
 infoRequests stub = filter (\(_, target) -> target == infoPath) <$> stub.stubLog
@@ -169,14 +170,14 @@ repeatResolve repetitions resolve state = when (repetitions > 0) do
   repeatResolve (repetitions - 1) resolve state
 
 withProxyEnvironment :: IO a -> IO a
-withProxyEnvironment action = Exception.bracket_ setProxies unsetProxies action
-  where
-    proxyVariables :: [String]
-    proxyVariables = ["http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY"]
-    proxyValue :: String
-    proxyValue = "http://127.0.0.1:1"
-    setProxies = forM_ proxyVariables \name -> setEnv name proxyValue
-    unsetProxies = forM_ proxyVariables \name -> unsetEnv name
+withProxyEnvironment = Exception.bracket_ setProxies unsetProxies
+ where
+  proxyVariables :: [String]
+  proxyVariables = ["http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY"]
+  proxyValue :: String
+  proxyValue = "http://127.0.0.1:1"
+  setProxies = forM_ proxyVariables \name -> setEnv name proxyValue
+  unsetProxies = forM_ proxyVariables \name -> unsetEnv name
 
 closedPort :: IO Int
 closedPort = do
@@ -212,7 +213,7 @@ readRepoDirectory candidates = do
 moduleNamesUnder :: FilePath -> FilePath -> IO [Text]
 moduleNamesUnder base directory = do
   entries <- listDirectory directory
-  fmap concat $ forM entries \entry -> do
+  concat <$> forM entries \entry -> do
     let fullPath = directory <> "/" <> entry
     isDirectory <- doesDirectoryExist fullPath
     if isDirectory
@@ -272,21 +273,21 @@ captureStderr action = do
   pure captured
 
 data StubBodies = MkStubBodies
-  { infoBody :: ByteString,
-    infoStatus :: Int,
-    sourcesBody :: ByteString,
-    sourcesStatus :: Int,
-    responseDelay :: Int
+  { infoBody :: ByteString
+  , infoStatus :: Int
+  , sourcesBody :: ByteString
+  , sourcesStatus :: Int
+  , responseDelay :: Int
   }
 
 data Stub = MkStub
-  { stubPort :: Int,
-    stubLog :: IO [(Double, Text)],
-    stubStop :: IO (),
-    stubSetInfoBody :: ByteString -> IO (),
-    stubSetInfoStatus :: Int -> IO (),
-    stubSetSourcesBody :: ByteString -> IO (),
-    stubSetSourcesStatus :: Int -> IO ()
+  { stubPort :: Int
+  , stubLog :: IO [(Double, Text)]
+  , stubStop :: IO ()
+  , stubSetInfoBody :: ByteString -> IO ()
+  , stubSetInfoStatus :: Int -> IO ()
+  , stubSetSourcesBody :: ByteString -> IO ()
+  , stubSetSourcesStatus :: Int -> IO ()
   }
 
 startStub :: Int -> IO Stub
@@ -296,11 +297,11 @@ startStub initialDelay = do
   bodiesVar <-
     STM.newTVarIO
       MkStubBodies
-        { infoBody = "",
-          infoStatus = 200,
-          sourcesBody = "",
-          sourcesStatus = 200,
-          responseDelay = initialDelay
+        { infoBody = ""
+        , infoStatus = 200
+        , sourcesBody = ""
+        , sourcesStatus = 200
+        , responseDelay = initialDelay
         }
   listeningSocket <- Socket.socket Socket.AF_INET Socket.Stream 0
   Socket.bind listeningSocket (Socket.SockAddrInet 0 0)
@@ -312,13 +313,13 @@ startStub initialDelay = do
   void (Concurrent.forkIO (acceptLoop listeningSocket logVar bodiesVar startTime))
   pure
     MkStub
-      { stubPort = port,
-        stubLog = STM.readTVarIO logVar,
-        stubStop = Socket.close listeningSocket,
-        stubSetInfoBody = \body -> STM.atomically (STM.modifyTVar' bodiesVar \old -> old {infoBody = body}),
-        stubSetInfoStatus = \status -> STM.atomically (STM.modifyTVar' bodiesVar \old -> old {infoStatus = status}),
-        stubSetSourcesBody = \body -> STM.atomically (STM.modifyTVar' bodiesVar \old -> old {sourcesBody = body}),
-        stubSetSourcesStatus = \status -> STM.atomically (STM.modifyTVar' bodiesVar \old -> old {sourcesStatus = status})
+      { stubPort = port
+      , stubLog = STM.readTVarIO logVar
+      , stubStop = Socket.close listeningSocket
+      , stubSetInfoBody = \body -> STM.atomically (STM.modifyTVar' bodiesVar \old -> old{infoBody = body})
+      , stubSetInfoStatus = \status -> STM.atomically (STM.modifyTVar' bodiesVar \old -> old{infoStatus = status})
+      , stubSetSourcesBody = \body -> STM.atomically (STM.modifyTVar' bodiesVar \old -> old{sourcesBody = body})
+      , stubSetSourcesStatus = \status -> STM.atomically (STM.modifyTVar' bodiesVar \old -> old{sourcesStatus = status})
       }
 
 withStub :: Int -> (Stub -> IO ()) -> IO ()
@@ -364,11 +365,11 @@ responseFor target bodies
   | target == infoPath = answer bodies.infoStatus bodies.infoBody
   | target == sourcesPath = answer bodies.sourcesStatus bodies.sourcesBody
   | otherwise = (404, "")
-  where
-    answer status body =
-      if status == 200
-        then (status, body)
-        else (status, "")
+ where
+  answer status body =
+    if status == 200
+      then (status, body)
+      else (status, "")
 
 renderResponse :: Int -> ByteString -> ByteString
 renderResponse status body =
@@ -395,16 +396,16 @@ testState = do
       pathId = MkCacheId 0
       transferInfo =
         MkTransferInfo
-          { host = Host (Just "http") Nothing "127.0.0.1:5055",
-            start = 0,
-            activityId = Strict.Nothing,
-            end = ()
+          { host = Host (Just "http") Nothing "127.0.0.1:5055"
+          , start = 0
+          , activityId = Strict.Nothing
+          , end = ()
           }
-      summary = (mempty :: DependencySummary) {runningDownloads = CMap.insert pathId transferInfo mempty}
+      summary = (mempty :: DependencySummary){runningDownloads = CMap.insert pathId transferInfo mempty}
   pure
     initial
-      { storePathInfos = CMap.insert pathId (MkStorePathInfo path mempty Strict.Nothing mempty) mempty,
-        fullSummary = summary
+      { storePathInfos = CMap.insert pathId (MkStorePathInfo path mempty Strict.Nothing mempty) mempty
+      , fullSummary = summary
       }
 
 addRunningTransfer :: Text -> TransferInfo () -> NOMState -> NOMState
@@ -412,10 +413,10 @@ addRunningTransfer hashText transferInfo state =
   let pathId = CMap.nextKey state.storePathInfos
       path = StorePath hashText "example"
       summary = state.fullSummary
-      newSummary = summary {runningDownloads = CMap.insert pathId transferInfo summary.runningDownloads}
+      newSummary = summary{runningDownloads = CMap.insert pathId transferInfo summary.runningDownloads}
    in state
-        { storePathInfos = CMap.insert pathId (MkStorePathInfo path mempty Strict.Nothing mempty) state.storePathInfos,
-          fullSummary = newSummary
+        { storePathInfos = CMap.insert pathId (MkStorePathInfo path mempty Strict.Nothing mempty) state.storePathInfos
+        , fullSummary = newSummary
         }
 
 addRunningUpload :: Host WithContext -> Text -> NOMState -> NOMState
@@ -423,10 +424,10 @@ addRunningUpload host hashText state =
   let pathId = CMap.nextKey state.storePathInfos
       transferInfo = MkTransferInfo host 0 Strict.Nothing ()
       summary = state.fullSummary
-      newSummary = summary {runningUploads = CMap.insert pathId transferInfo summary.runningUploads}
+      newSummary = summary{runningUploads = CMap.insert pathId transferInfo summary.runningUploads}
    in state
-        { storePathInfos = CMap.insert pathId (MkStorePathInfo (StorePath hashText "example") mempty Strict.Nothing mempty) state.storePathInfos,
-          fullSummary = newSummary
+        { storePathInfos = CMap.insert pathId (MkStorePathInfo (StorePath hashText "example") mempty Strict.Nothing mempty) state.storePathInfos
+        , fullSummary = newSummary
         }
 
 addCompletedUpload :: Host WithContext -> Text -> NOMState -> NOMState
@@ -434,10 +435,10 @@ addCompletedUpload host hashText state =
   let pathId = CMap.nextKey state.storePathInfos
       transferInfo = MkTransferInfo host 0 Strict.Nothing (Strict.Just 1.0)
       summary = state.fullSummary
-      newSummary = summary {completedUploads = CMap.insert pathId transferInfo summary.completedUploads}
+      newSummary = summary{completedUploads = CMap.insert pathId transferInfo summary.completedUploads}
    in state
-        { storePathInfos = CMap.insert pathId (MkStorePathInfo (StorePath hashText "example") mempty Strict.Nothing mempty) state.storePathInfos,
-          fullSummary = newSummary
+        { storePathInfos = CMap.insert pathId (MkStorePathInfo (StorePath hashText "example") mempty Strict.Nothing mempty) state.storePathInfos
+        , fullSummary = newSummary
         }
 
 addPlannedDownload :: Text -> NOMState -> NOMState
@@ -445,8 +446,8 @@ addPlannedDownload hashText state =
   let pathId = CMap.nextKey state.storePathInfos
       summary = state.fullSummary
    in state
-        { storePathInfos = CMap.insert pathId (MkStorePathInfo (StorePath hashText "example") mempty Strict.Nothing mempty) state.storePathInfos,
-          fullSummary = summary {plannedDownloads = CSet.insert pathId summary.plannedDownloads}
+        { storePathInfos = CMap.insert pathId (MkStorePathInfo (StorePath hashText "example") mempty Strict.Nothing mempty) state.storePathInfos
+        , fullSummary = summary{plannedDownloads = CSet.insert pathId summary.plannedDownloads}
         }
 
 addDerivationDownload :: DerivationId -> Host WithContext -> Text -> NOMState -> NOMState
@@ -454,11 +455,11 @@ addDerivationDownload derivationId host hashText state =
   let pathId = CMap.nextKey state.storePathInfos
       path = StorePath hashText "example"
       transferInfo = MkTransferInfo host 0 Strict.Nothing ()
-      summary = (mempty :: DependencySummary) {runningDownloads = CMap.insert pathId transferInfo mempty}
+      summary = (mempty :: DependencySummary){runningDownloads = CMap.insert pathId transferInfo mempty}
       derivationInfo = MkDerivationInfo (Derivation path) mempty mempty mempty Unknown summary False mempty Strict.Nothing Strict.Nothing
    in state
-        { storePathInfos = CMap.insert pathId (MkStorePathInfo path mempty Strict.Nothing mempty) state.storePathInfos,
-          derivationInfos = CMap.insert derivationId derivationInfo state.derivationInfos
+        { storePathInfos = CMap.insert pathId (MkStorePathInfo path mempty Strict.Nothing mempty) state.storePathInfos
+        , derivationInfos = CMap.insert derivationId derivationInfo state.derivationInfos
         }
 
 derivationDownloadHost :: DerivationId -> StorePathId -> NOMState -> Maybe (Host WithContext)
@@ -476,8 +477,8 @@ addBuildsAndPlan state =
    in state
         { fullSummary =
             summary
-              { completedBuilds = CMap.insert (MkCacheId 5) completedInfo summary.completedBuilds,
-                plannedBuilds = CSet.fromFoldable [MkCacheId 6]
+              { completedBuilds = CMap.insert (MkCacheId 5) completedInfo summary.completedBuilds
+              , plannedBuilds = CSet.fromFoldable [MkCacheId 6]
               }
         }
 
@@ -489,8 +490,8 @@ addBuildAndFailure state =
    in state
         { fullSummary =
             summary
-              { completedBuilds = CMap.insert (MkCacheId 7) completedInfo summary.completedBuilds,
-                failedBuilds = CMap.insert (MkCacheId 8) failedInfo summary.failedBuilds
+              { completedBuilds = CMap.insert (MkCacheId 7) completedInfo summary.completedBuilds
+              , failedBuilds = CMap.insert (MkCacheId 8) failedInfo summary.failedBuilds
               }
         }
 
@@ -513,10 +514,10 @@ copyPathLine hostText =
 
 delayedLineStream :: Int -> [ByteString] -> Stream ByteString
 delayedLineStream delayMicroseconds inputLines = Stream.mapM delayLine (Stream.fromList inputLines)
-  where
-    delayLine line = do
-      Concurrent.threadDelay delayMicroseconds
-      pure line
+ where
+  delayLine line = do
+    Concurrent.threadDelay delayMicroseconds
+    pure line
 
 jsonStateUpdater :: (UpdateMonad m) => NixJSONMessage -> StateT NOMState m ([NOMError], ByteString, Bool)
 jsonStateUpdater input = do
@@ -551,10 +552,7 @@ runJsonProcess printerMay maintenance resolve initialState inputStream =
 withNullHandle :: (Handle -> IO a) -> IO a
 withNullHandle action = do
   temporaryDirectory <- getTemporaryDirectory
-  Exception.bracket
-    (SystemIO.openFile (temporaryDirectory <> "/nom-cache-discovery-io-output.txt") SystemIO.WriteMode)
-    SystemIO.hClose
-    action
+  SystemIO.withFile (temporaryDirectory <> "/nom-cache-discovery-io-output.txt") SystemIO.WriteMode action
 
 countingResolve :: IORef Int -> NOMState -> IO NOMState
 countingResolve counter state = do
@@ -562,7 +560,7 @@ countingResolve counter state = do
   pure state
 
 identityResolve :: NOMState -> IO NOMState
-identityResolve state = pure state
+identityResolve = pure
 
 rewriteResolve :: NOMState -> IO NOMState
 rewriteResolve state = pure (rewriteState (Map.singleton hashPart source) state)
@@ -588,11 +586,11 @@ summaryText :: NOMState -> Text
 summaryText state =
   Text.pack
     . show
-    $ ( CMap.size state.fullSummary.runningDownloads,
-        CMap.size state.fullSummary.completedDownloads,
-        CMap.size state.fullSummary.completedBuilds,
-        CMap.size state.fullSummary.failedBuilds,
-        CSet.size state.fullSummary.plannedBuilds
+    $ ( CMap.size state.fullSummary.runningDownloads
+      , CMap.size state.fullSummary.completedDownloads
+      , CMap.size state.fullSummary.completedBuilds
+      , CMap.size state.fullSummary.failedBuilds
+      , CSet.size state.fullSummary.plannedBuilds
       )
 
 summaryRecordingPrinter :: IORef (Maybe Text) -> NOMState -> Maybe (Window Int) -> (ZonedTime, Double) -> Text
@@ -608,15 +606,15 @@ touchedInitialState = do
       derivationInfo = MkDerivationInfo derivation mempty mempty mempty Unknown mempty False mempty Strict.Nothing Strict.Nothing
   pure
     base
-      { derivationInfos = CMap.insert (MkCacheId 1) derivationInfo base.derivationInfos,
-        touchedIds = CSet.fromFoldable [MkCacheId 1]
+      { derivationInfos = CMap.insert (MkCacheId 1) derivationInfo base.derivationInfos
+      , touchedIds = CSet.fromFoldable [MkCacheId 1]
       }
 
 readIntegrationReplay :: Text -> IO ByteString
 readIntegrationReplay name = do
   let candidates =
-        [ "test/integration/" <> name <> "/stderr.json",
-          "nix-output-monitor/test/integration/" <> name <> "/stderr.json"
+        [ "test/integration/" <> name <> "/stderr.json"
+        , "nix-output-monitor/test/integration/" <> name <> "/stderr.json"
         ]
   existingFiles <- filterM doesFileExist (toString <$> candidates)
   case existingFiles of
@@ -631,15 +629,15 @@ tests = do
     [ -- INVENTORY: sourcemap.1.1
       "parse source map" ~: do
         let input = encodeUtf8 (hashPart <> " " <> source <> "\nnot a source line\n")
-        assertEqual "source map is parsed" (Map.singleton hashPart source) (parseSourceMap input),
-      -- INVENTORY: protocol.4.1
+        assertEqual "source map is parsed" (Map.singleton hashPart source) (parseSourceMap input)
+    , -- INVENTORY: protocol.4.1
       -- INVENTORY: sourcemap.2.1
       "detect proxy candidates" ~: do
         assertEqual
           "loopback download host is a proxy candidate"
           (Set.singleton "http://127.0.0.1:5055")
-          (proxyCandidates nomState),
-      -- INVENTORY: sourcemap.3.1
+          (proxyCandidates nomState)
+    , -- INVENTORY: sourcemap.3.1
       -- INVENTORY: sourcemap.5.1
       -- INVENTORY: sourcemap.6.1
       "rewrite download host" ~: do
@@ -647,24 +645,24 @@ tests = do
         assertEqual
           "source host replaces the proxy host"
           (Just (Host (Just "https") Nothing "cache.nixos.org"))
-          (fmap (.host) (CMap.lookup (MkCacheId 0) rewritten.fullSummary.runningDownloads)),
-      -- INVENTORY: sourcemap.1.2
+          (fmap (.host) (CMap.lookup (MkCacheId 0) rewritten.fullSummary.runningDownloads))
+    , -- INVENTORY: sourcemap.1.2
       "a 31-character hash line is skipped" ~: do
         let input = sourceLine (Text.replicate 31 "a") source
-        assertEqual "no entries" Map.empty (parseSourceMap input),
-      -- INVENTORY: sourcemap.1.3
+        assertEqual "no entries" Map.empty (parseSourceMap input)
+    , -- INVENTORY: sourcemap.1.3
       "a 33-character hash line is skipped" ~: do
         let input = sourceLine (Text.replicate 33 "a") source
-        assertEqual "no entries" Map.empty (parseSourceMap input),
-      -- INVENTORY: sourcemap.1.4
+        assertEqual "no entries" Map.empty (parseSourceMap input)
+    , -- INVENTORY: sourcemap.1.4
       "a line with three words is skipped" ~: do
         let input = encodeUtf8 (firstHash <> " " <> source <> " extra\n")
-        assertEqual "no entries" Map.empty (parseSourceMap input),
-      -- INVENTORY: sourcemap.1.5
+        assertEqual "no entries" Map.empty (parseSourceMap input)
+    , -- INVENTORY: sourcemap.1.5
       "a line with one word is skipped" ~: do
         let input = encodeUtf8 (firstHash <> "\n")
-        assertEqual "no entries" Map.empty (parseSourceMap input),
-      -- INVENTORY: sourcemap.1.6
+        assertEqual "no entries" Map.empty (parseSourceMap input)
+    , -- INVENTORY: sourcemap.1.6
       "blank and junk lines are skipped around valid lines" ~: do
         let input =
               sourceLine firstHash "https://a.example.org"
@@ -673,30 +671,30 @@ tests = do
         assertEqual
           "two entries are kept"
           (Map.fromList [(firstHash, "https://a.example.org"), (secondHash, "https://b.example.org")])
-          (parseSourceMap input),
-      -- INVENTORY: sourcemap.1.7
+          (parseSourceMap input)
+    , -- INVENTORY: sourcemap.1.7
       "the last duplicate hash line wins" ~: do
         let input = sourceLine hashPart "https://old.example.org" <> sourceLine hashPart "https://new.example.org"
-        assertEqual "the new URL wins" (Map.singleton hashPart "https://new.example.org") (parseSourceMap input),
-      -- INVENTORY: sourcemap.1.8
+        assertEqual "the new URL wins" (Map.singleton hashPart "https://new.example.org") (parseSourceMap input)
+    , -- INVENTORY: sourcemap.1.8
       "a final line without a newline is parsed" ~: do
         let input = encodeUtf8 (hashPart <> " " <> source)
-        assertEqual "the entry is parsed" (Map.singleton hashPart source) (parseSourceMap input),
-      -- INVENTORY: sourcemap.1.9
+        assertEqual "the entry is parsed" (Map.singleton hashPart source) (parseSourceMap input)
+    , -- INVENTORY: sourcemap.1.9
       "a 32-character non-hex hash is accepted" ~: do
         let nonHexHash = "ghijklmnopqrstuvwxyz0123456789ab"
-        assertEqual "the entry is kept" (Map.singleton nonHexHash source) (parseSourceMap (sourceLine nonHexHash source)),
-      -- INVENTORY: sourcemap.1.10
+        assertEqual "the entry is kept" (Map.singleton nonHexHash source) (parseSourceMap (sourceLine nonHexHash source))
+    , -- INVENTORY: sourcemap.1.10
       "an empty body yields an empty map" ~: do
-        assertEqual "no entries" Map.empty (parseSourceMap ""),
-      "invalid UTF-8 is decoded leniently" ~: do
-        assertEqual "invalid bytes yield no entries" Map.empty (parseSourceMap (ByteString.pack [0xff, 0xfe])),
-      -- INVENTORY: sourcemap.2.2
+        assertEqual "no entries" Map.empty (parseSourceMap "")
+    , "invalid UTF-8 is decoded leniently" ~: do
+        assertEqual "invalid bytes yield no entries" Map.empty (parseSourceMap (ByteString.pack [0xff, 0xfe]))
+    , -- INVENTORY: sourcemap.2.2
       "a completed download is a proxy candidate" ~: do
         base <- baseState
         let state = addCompleted (Host (Just "http") Nothing "127.0.0.1:5055") hashPart base
-        assertEqual "the completed download is a candidate" (Set.singleton "http://127.0.0.1:5055") (proxyCandidates state),
-      -- INVENTORY: sourcemap.2.3
+        assertEqual "the completed download is a candidate" (Set.singleton "http://127.0.0.1:5055") (proxyCandidates state)
+    , -- INVENTORY: sourcemap.2.3
       "a host in both download maps yields one candidate" ~: do
         base <- baseState
         let host = Host (Just "http") Nothing "127.0.0.1:5055"
@@ -705,38 +703,38 @@ tests = do
             completedTransfer = MkTransferInfo host 0 Strict.Nothing (Strict.Just 1.0)
             summary =
               (mempty :: DependencySummary)
-                { runningDownloads = CMap.insert pathId runningTransfer mempty,
-                  completedDownloads = CMap.insert pathId completedTransfer mempty
+                { runningDownloads = CMap.insert pathId runningTransfer mempty
+                , completedDownloads = CMap.insert pathId completedTransfer mempty
                 }
             state =
               base
-                { storePathInfos = CMap.insert pathId (MkStorePathInfo (StorePath hashPart "example") mempty Strict.Nothing mempty) mempty,
-                  fullSummary = summary
+                { storePathInfos = CMap.insert pathId (MkStorePathInfo (StorePath hashPart "example") mempty Strict.Nothing mempty) mempty
+                , fullSummary = summary
                 }
-        assertEqual "one candidate" (Set.singleton "http://127.0.0.1:5055") (proxyCandidates state),
-      -- INVENTORY: sourcemap.2.4
+        assertEqual "one candidate" (Set.singleton "http://127.0.0.1:5055") (proxyCandidates state)
+    , -- INVENTORY: sourcemap.2.4
       "a non-loopback download yields no candidate" ~: do
         base <- baseState
         let state = addRunning (Host Nothing Nothing "10.0.0.1") hashPart base
-        assertEqual "no candidate" Set.empty (proxyCandidates state),
-      -- INVENTORY: sourcemap.2.5
+        assertEqual "no candidate" Set.empty (proxyCandidates state)
+    , -- INVENTORY: sourcemap.2.5
       "a state with no downloads yields no candidate" ~: do
         base <- baseState
-        assertEqual "no candidate" Set.empty (proxyCandidates base),
-      -- INVENTORY: sourcemap.2.6
+        assertEqual "no candidate" Set.empty (proxyCandidates base)
+    , -- INVENTORY: sourcemap.2.6
       "a running upload yields no candidate" ~: do
         base <- baseState
         let state = addRunningUpload (loopbackHost 5055) hashPart base
-        assertEqual "no candidate" Set.empty (proxyCandidates state),
-      -- INVENTORY: sourcemap.3.2
+        assertEqual "no candidate" Set.empty (proxyCandidates state)
+    , -- INVENTORY: sourcemap.3.2
       "a completed download in the full summary is rewritten" ~: do
         base <- baseState
         let rewritten = rewriteState (Map.singleton hashPart source) (addCompleted (loopbackHost 5055) hashPart base)
         assertEqual
           "the completed download is rewritten"
           (Just (sourceHost "cache.nixos.org"))
-          (fmap (.host) (CMap.lookup (MkCacheId 0) rewritten.fullSummary.completedDownloads)),
-      -- INVENTORY: sourcemap.3.3
+          (fmap (.host) (CMap.lookup (MkCacheId 0) rewritten.fullSummary.completedDownloads))
+    , -- INVENTORY: sourcemap.3.3
       "a download inside a derivation summary is rewritten" ~: do
         base <- baseState
         let rewritten =
@@ -746,8 +744,8 @@ tests = do
         assertEqual
           "the derivation download is rewritten"
           (Just (sourceHost "cache.nixos.org"))
-          (derivationDownloadHost (MkCacheId 1) (MkCacheId 0) rewritten),
-      -- INVENTORY: sourcemap.3.4
+          (derivationDownloadHost (MkCacheId 1) (MkCacheId 0) rewritten)
+    , -- INVENTORY: sourcemap.3.4
       "every derivation summary is rewritten" ~: do
         base <- baseState
         let state =
@@ -764,37 +762,37 @@ tests = do
         assertEqual
           "the second derivation download is rewritten"
           (Just (sourceHost "cache.nixos.org"))
-          (derivationDownloadHost (MkCacheId 2) (MkCacheId 1) rewritten),
-      -- INVENTORY: sourcemap.3.5
+          (derivationDownloadHost (MkCacheId 2) (MkCacheId 1) rewritten)
+    , -- INVENTORY: sourcemap.3.5
       "an empty source map returns the state unchanged" ~: do
         base <- baseState
         let state = addRunning (loopbackHost 5055) hashPart base
-        assertEqual "the state is unchanged" state (rewriteState Map.empty state),
-      -- INVENTORY: sourcemap.3.6
+        assertEqual "the state is unchanged" state (rewriteState Map.empty state)
+    , -- INVENTORY: sourcemap.3.6
       "a download with no store path info keeps its host" ~: do
         base <- baseState
         let transferInfo = MkTransferInfo (loopbackHost 5055) 0 Strict.Nothing ()
-            summary = (mempty :: DependencySummary) {runningDownloads = CMap.insert (MkCacheId 0) transferInfo mempty}
-            state = base {fullSummary = summary}
+            summary = (mempty :: DependencySummary){runningDownloads = CMap.insert (MkCacheId 0) transferInfo mempty}
+            state = base{fullSummary = summary}
             rewritten = rewriteState (Map.singleton hashPart source) state
-        assertEqual "the host is kept" (Just (loopbackHost 5055)) (hostOf (MkCacheId 0) rewritten),
-      -- INVENTORY: sourcemap.3.7
+        assertEqual "the host is kept" (Just (loopbackHost 5055)) (hostOf (MkCacheId 0) rewritten)
+    , -- INVENTORY: sourcemap.3.7
       "a rewritten state keeps its builds and planned downloads" ~: do
         base <- baseState
         let state = addRunning (loopbackHost 5055) hashPart (addBuildsAndPlan base)
             rewritten = rewriteState (Map.singleton hashPart source) state
         assertEqual "completed builds are kept" state.fullSummary.completedBuilds rewritten.fullSummary.completedBuilds
         assertEqual "planned builds are kept" state.fullSummary.plannedBuilds rewritten.fullSummary.plannedBuilds
-        assertEqual "the download is rewritten" (Just (sourceHost "cache.nixos.org")) (hostOf (MkCacheId 0) rewritten),
-      -- INVENTORY: sourcemap.3.8
+        assertEqual "the download is rewritten" (Just (sourceHost "cache.nixos.org")) (hostOf (MkCacheId 0) rewritten)
+    , -- INVENTORY: sourcemap.3.8
       "rewriting a rewritten state is stable" ~: do
         base <- baseState
         let state = addRunning (loopbackHost 5055) hashPart base
             sourceMap = Map.singleton hashPart source
             firstRewrite = rewriteState sourceMap state
             secondRewrite = rewriteState sourceMap firstRewrite
-        assertEqual "the second rewrite equals the first" firstRewrite secondRewrite,
-      -- INVENTORY: sourcemap.4.1
+        assertEqual "the second rewrite equals the first" firstRewrite secondRewrite
+    , -- INVENTORY: sourcemap.4.1
       "a running upload keeps its host" ~: do
         base <- baseState
         let rewritten =
@@ -804,8 +802,8 @@ tests = do
         assertEqual
           "the upload host is kept"
           (Just (loopbackHost 5055))
-          (fmap (.host) (CMap.lookup (MkCacheId 0) rewritten.fullSummary.runningUploads)),
-      -- INVENTORY: sourcemap.4.2
+          (fmap (.host) (CMap.lookup (MkCacheId 0) rewritten.fullSummary.runningUploads))
+    , -- INVENTORY: sourcemap.4.2
       "a completed upload keeps its host" ~: do
         base <- baseState
         let rewritten =
@@ -815,57 +813,57 @@ tests = do
         assertEqual
           "the upload host is kept"
           (Just (loopbackHost 5055))
-          (fmap (.host) (CMap.lookup (MkCacheId 0) rewritten.fullSummary.completedUploads)),
-      -- INVENTORY: sourcemap.4.3
+          (fmap (.host) (CMap.lookup (MkCacheId 0) rewritten.fullSummary.completedUploads))
+    , -- INVENTORY: sourcemap.4.3
       "planned downloads are unchanged by the rewrite" ~: do
         base <- baseState
         let state = addPlannedDownload hashPart base
             rewritten = rewriteState (Map.singleton hashPart source) state
-        assertEqual "planned downloads are unchanged" state.fullSummary.plannedDownloads rewritten.fullSummary.plannedDownloads,
-      -- INVENTORY: sourcemap.4.4
+        assertEqual "planned downloads are unchanged" state.fullSummary.plannedDownloads rewritten.fullSummary.plannedDownloads
+    , -- INVENTORY: sourcemap.4.4
       "build sets and failed builds are unchanged by the rewrite" ~: do
         base <- baseState
         let state = addBuildAndFailure base
             rewritten = rewriteState (Map.singleton hashPart source) state
         assertEqual "completed builds are unchanged" state.fullSummary.completedBuilds rewritten.fullSummary.completedBuilds
-        assertEqual "failed builds are unchanged" state.fullSummary.failedBuilds rewritten.fullSummary.failedBuilds,
-      -- INVENTORY: sourcemap.5.2
+        assertEqual "failed builds are unchanged" state.fullSummary.failedBuilds rewritten.fullSummary.failedBuilds
+    , -- INVENTORY: sourcemap.5.2
       "a path without a source entry keeps its host" ~: do
         base <- baseState
         let state = addRunning (loopbackHost 5055) hashPart base
             rewritten = rewriteState (Map.singleton secondHash source) state
-        assertEqual "the host is kept" (Just (loopbackHost 5055)) (hostOf (MkCacheId 0) rewritten),
-      -- INVENTORY: sourcemap.5.3
+        assertEqual "the host is kept" (Just (loopbackHost 5055)) (hostOf (MkCacheId 0) rewritten)
+    , -- INVENTORY: sourcemap.5.3
       "a non-proxy host is left alone even with a source entry" ~: do
         base <- baseState
         let state = addRunning (Host Nothing Nothing "10.0.0.1") hashPart base
             rewritten = rewriteState (Map.singleton hashPart source) state
-        assertEqual "the public host is kept" (Just (Host Nothing Nothing "10.0.0.1")) (hostOf (MkCacheId 0) rewritten),
-      -- INVENTORY: sourcemap.5.4
+        assertEqual "the public host is kept" (Just (Host Nothing Nothing "10.0.0.1")) (hostOf (MkCacheId 0) rewritten)
+    , -- INVENTORY: sourcemap.5.4
       "the lookup uses the 32-character hash part" ~: do
         base <- baseState
         let state = addRunning (loopbackHost 5055) hashPart base
             correct = rewriteState (Map.singleton hashPart source) state
             wrong = rewriteState (Map.singleton "ffffffffffffffffffffffffffffffff" source) state
         assertEqual "the hash part finds the entry" (Just (sourceHost "cache.nixos.org")) (hostOf (MkCacheId 0) correct)
-        assertEqual "a wrong key keeps the host" (Just (loopbackHost 5055)) (hostOf (MkCacheId 0) wrong),
-      -- INVENTORY: sourcemap.5.5
+        assertEqual "a wrong key keeps the host" (Just (loopbackHost 5055)) (hostOf (MkCacheId 0) wrong)
+    , -- INVENTORY: sourcemap.5.5
       "a source entry without a protocol has no protocol" ~: do
         base <- baseState
         let rewritten =
               rewriteState
                 (Map.singleton hashPart "cache.example.org")
                 (addRunning (loopbackHost 5055) hashPart base)
-        assertEqual "the source has no protocol" (Just (Host Nothing Nothing "cache.example.org")) (hostOf (MkCacheId 0) rewritten),
-      -- INVENTORY: sourcemap.5.6
+        assertEqual "the source has no protocol" (Just (Host Nothing Nothing "cache.example.org")) (hostOf (MkCacheId 0) rewritten)
+    , -- INVENTORY: sourcemap.5.6
       "a local source rewrites the host to Localhost" ~: do
         base <- baseState
         let rewritten =
               rewriteState
                 (Map.singleton hashPart "local")
                 (addRunning (loopbackHost 5055) hashPart base)
-        assertEqual "the source is local" (Just Localhost) (hostOf (MkCacheId 0) rewritten),
-      -- INVENTORY: sourcemap.5.7
+        assertEqual "the source is local" (Just Localhost) (hostOf (MkCacheId 0) rewritten)
+    , -- INVENTORY: sourcemap.5.7
       "the transfer start and activity id survive the rewrite" ~: do
         base <- baseState
         let transferInfo = MkTransferInfo (loopbackHost 5055) 5 (Strict.Just (MkId 7)) ()
@@ -876,20 +874,20 @@ tests = do
           Just rewrittenTransfer -> do
             assertEqual "the host is rewritten" (sourceHost "cache.nixos.org") rewrittenTransfer.host
             assertEqual "the start is kept" 5 rewrittenTransfer.start
-            assertEqual "the activity id is kept" (Strict.Just (MkId 7)) rewrittenTransfer.activityId,
-      -- INVENTORY: sourcemap.6.2
+            assertEqual "the activity id is kept" (Strict.Just (MkId 7)) rewrittenTransfer.activityId
+    , -- INVENTORY: sourcemap.6.2
       "a public host is not treated as a proxy host" ~: do
         base <- baseState
         let state = addRunning (Host (Just "https") Nothing "cache.nixos.org") hashPart base
             rewritten = rewriteState (Map.singleton hashPart source) state
-        assertEqual "the public host is unchanged" (Just (Host (Just "https") Nothing "cache.nixos.org")) (hostOf (MkCacheId 0) rewritten),
-      -- INVENTORY: sourcemap.6.3
+        assertEqual "the public host is unchanged" (Just (Host (Just "https") Nothing "cache.nixos.org")) (hostOf (MkCacheId 0) rewritten)
+    , -- INVENTORY: sourcemap.6.3
       "an https loopback host is treated as a proxy host" ~: do
         base <- baseState
         let state = addRunning (Host (Just "https") Nothing "127.0.0.1:5055") hashPart base
             rewritten = rewriteState (Map.singleton hashPart source) state
-        assertEqual "the https loopback host is rewritten" (Just (sourceHost "cache.nixos.org")) (hostOf (MkCacheId 0) rewritten),
-      -- INVENTORY: io.1.1
+        assertEqual "the https loopback host is rewritten" (Just (sourceHost "cache.nixos.org")) (hostOf (MkCacheId 0) rewritten)
+    , -- INVENTORY: io.1.1
       "the resolve hook is called once per printed frame" ~: do
         initial <- baseState
         resolveCount <- newIORef 0
@@ -905,8 +903,8 @@ tests = do
         resolutions <- readIORef resolveCount
         frames <- readIORef printerCount
         assertBool "at least one frame is printed" (frames >= 1)
-        assertEqual "resolve runs once per printed frame" frames resolutions,
-      -- INVENTORY: io.1.2
+        assertEqual "resolve runs once per printed frame" frames resolutions
+    , -- INVENTORY: io.1.2
       "the printer receives the resolved state" ~: do
         initial <- testState
         recorded <- newIORef Nothing
@@ -918,8 +916,8 @@ tests = do
               rewriteResolve
               initial
               (Stream.fromList [jsonLine "hello"])
-        assertEqual "the printer sees the resolved host" (Just (sourceHost "cache.nixos.org")) =<< readIORef recorded,
-      -- INVENTORY: io.1.3
+        assertEqual "the printer sees the resolved host" (Just (sourceHost "cache.nixos.org")) =<< readIORef recorded
+    , -- INVENTORY: io.1.3
       "the resolve hook runs after maintenance" ~: do
         initial <- touchedInitialState
         recorded <- newIORef Nothing
@@ -932,8 +930,8 @@ tests = do
               (touchedResolve recorded)
               initial
               (Stream.fromList [jsonLine "hello"])
-        assertEqual "maintenance clears touched ids before resolve" (Just 0) =<< readIORef recorded,
-      -- INVENTORY: io.1.4
+        assertEqual "maintenance clears touched ids before resolve" (Just 0) =<< readIORef recorded
+    , -- INVENTORY: io.1.4
       "the state kept in the frame variable stays unresolved" ~: do
         initial <- testState
         recorded <- newIORef Nothing
@@ -946,8 +944,8 @@ tests = do
               initial
               (Stream.fromList [jsonLine "hello"])
         assertEqual "the printed host is resolved" (Just (sourceHost "cache.nixos.org")) =<< readIORef recorded
-        assertEqual "the returned state stays unresolved" (hostOf (MkCacheId 0) initial) (hostOf (MkCacheId 0) returned),
-      -- INVENTORY: io.1.5
+        assertEqual "the returned state stays unresolved" (hostOf (MkCacheId 0) initial) (hostOf (MkCacheId 0) returned)
+    , -- INVENTORY: io.1.5
       "an unchanged resolve prints the same frame as pure" ~: do
         standardReplay <- readIntegrationReplay "standard"
         initial <- baseState
@@ -972,8 +970,8 @@ tests = do
         expectedOutput <- readIORef pureOutput
         actualOutput <- readIORef identityOutput
         assertBool "a frame was printed" (isJust expectedOutput)
-        assertEqual "an unchanged resolve prints the same final frame" expectedOutput actualOutput,
-      -- INVENTORY: io.1.6
+        assertEqual "an unchanged resolve prints the same final frame" expectedOutput actualOutput
+    , -- INVENTORY: io.1.6
       "an exception in the resolve hook escapes the run" ~: do
         initial <- baseState
         printerCount <- newIORef 0
@@ -989,8 +987,8 @@ tests = do
                   (Stream.fromList [jsonLine "hello"])
         case outcome of
           Left exception -> assertBool "the resolver failure escapes" ("resolver boom" `Text.isInfixOf` Text.pack (show exception))
-          Right _ -> assertFailure "the resolver failure was swallowed",
-      -- INVENTORY: io.2.1
+          Right _ -> assertFailure "the resolver failure was swallowed"
+    , -- INVENTORY: io.2.1
       "interact passes its resolve argument through" ~: do
         initial <- baseState
         resolveCount <- newIORef 0
@@ -1010,8 +1008,8 @@ tests = do
                 handle
                 initial
         resolutions <- readIORef resolveCount
-        assertBool "interact forwards the resolve hook" (resolutions >= 1),
-      -- INVENTORY: io.2.2
+        assertBool "interact forwards the resolve hook" (resolutions >= 1)
+    , -- INVENTORY: io.2.2
       "interact prints states produced by the resolve hook" ~: do
         initial <- testState
         recorded <- newIORef Nothing
@@ -1029,8 +1027,8 @@ tests = do
                 (Right <$> Stream.fromList [jsonLine "hello"])
                 handle
                 initial
-        assertEqual "interact prints the resolved host" (Just (sourceHost "cache.nixos.org")) =<< readIORef recorded,
-      -- INVENTORY: io.2.3
+        assertEqual "interact prints the resolved host" (Just (sourceHost "cache.nixos.org")) =<< readIORef recorded
+    , -- INVENTORY: io.2.3
       "interact applies maintenance before resolve" ~: do
         initial <- touchedInitialState
         recorded <- newIORef Nothing
@@ -1049,8 +1047,8 @@ tests = do
                 (Right <$> Stream.fromList [jsonLine "hello"])
                 handle
                 initial
-        assertEqual "resolve sees the maintained state" (Just 0) =<< readIORef recorded,
-      -- INVENTORY: io.3.1
+        assertEqual "resolve sees the maintained state" (Just 0) =<< readIORef recorded
+    , -- INVENTORY: io.3.1
       "the resolve hook reaches writeStateToScreen" ~: do
         initial <- baseState
         resolveCount <- newIORef 0
@@ -1064,8 +1062,8 @@ tests = do
               initial
               (Stream.fromList [jsonLine "hello"])
         resolutions <- readIORef resolveCount
-        assertBool "the resolve hook is called" (resolutions >= 1),
-      -- INVENTORY: io.3.2
+        assertBool "the resolve hook is called" (resolutions >= 1)
+    , -- INVENTORY: io.3.2
       "without a printer the resolve hook is never called" ~: do
         initial <- baseState
         resolveCount <- newIORef 0
@@ -1076,8 +1074,8 @@ tests = do
             (countingResolve resolveCount)
             initial
             (Stream.fromList [jsonLine "hello"])
-        assertEqual "resolve is never called" 0 =<< readIORef resolveCount,
-      -- INVENTORY: io.3.3
+        assertEqual "resolve is never called" 0 =<< readIORef resolveCount
+    , -- INVENTORY: io.3.3
       "resolve is called from the printing loop, not the parser" ~: do
         initial <- baseState
         resolveCount <- newIORef 0
@@ -1091,8 +1089,8 @@ tests = do
               initial
               (Stream.fromList (replicate 5 (jsonLine "hello")))
         resolutions <- readIORef resolveCount
-        assertBool "resolve runs once or twice, not per update" (resolutions >= 1 && resolutions <= 2),
-      -- INVENTORY: io.3.4
+        assertBool "resolve runs once or twice, not per update" (resolutions >= 1 && resolutions <= 2)
+    , -- INVENTORY: io.3.4
       "each printed frame resolves once" ~: do
         initial <- baseState
         resolveCount <- newIORef 0
@@ -1109,8 +1107,8 @@ tests = do
         frames <- readIORef printerCount
         assertBool "at most two frames are printed" (frames <= 2)
         assertBool "at least one frame is printed" (frames >= 1)
-        assertEqual "each frame resolves once" frames resolutions,
-      -- INVENTORY: io.4.1
+        assertEqual "each frame resolves once" frames resolutions
+    , -- INVENTORY: io.4.1
       "testProcess with pure resolve keeps the Nix host" ~: do
         initial <- baseState
         returned <-
@@ -1120,8 +1118,8 @@ tests = do
             pure
             initial
             (Stream.fromList [copyPathLine "http://127.0.0.1:5055"])
-        assertEqual "the download keeps the reported host" (Just (Host (Just "http") Nothing "127.0.0.1:5055")) (hostOf (MkCacheId 0) returned),
-      -- INVENTORY: io.4.2
+        assertEqual "the download keeps the reported host" (Just (Host (Just "http") Nothing "127.0.0.1:5055")) (hostOf (MkCacheId 0) returned)
+    , -- INVENTORY: io.4.2
       "integration expected states keep the reported hosts" ~: do
         standardReplay <- readIntegrationReplay "standard"
         initial <- baseState
@@ -1143,8 +1141,8 @@ tests = do
             downloadInitial
             (Stream.fromList [copyPathLine "http://127.0.0.1:5055"])
         assertEqual "the download replay keeps the reported host" (Just (Host (Just "http") Nothing "127.0.0.1:5055")) (hostOf (MkCacheId 0) downloadState)
-        assertBool "a start-only line leaves no completed download" (CMap.null downloadState.fullSummary.completedDownloads),
-      -- INVENTORY: io.4.3
+        assertBool "a start-only line leaves no completed download" (CMap.null downloadState.fullSummary.completedDownloads)
+    , -- INVENTORY: io.4.3
       "the integration replays pass their end-state checks" ~: do
         standardReplay <- readIntegrationReplay "standard"
         failReplay <- readIntegrationReplay "fail"
@@ -1170,15 +1168,15 @@ tests = do
         assertEqual "one build is planned" 1 (CSet.size failState.fullSummary.plannedBuilds)
         assertEqual "one build failed" 1 (CMap.size failState.fullSummary.failedBuilds)
         assertEqual "no build completed" 0 (CMap.size failState.fullSummary.completedBuilds)
-        assertEqual "one build is running" 1 (CMap.size failState.fullSummary.runningBuilds),
-      -- discovery.1 Resolver construction with a no-proxy TLS manager
+        assertEqual "one build is running" 1 (CMap.size failState.fullSummary.runningBuilds)
+    , -- discovery.1 Resolver construction with a no-proxy TLS manager
 
       -- INVENTORY: discovery.1.1
       "newResolver issues no request" ~: withStub 0 \stub -> do
         void newResolver
         Concurrent.threadDelay 300_000
-        assertEqual "no request is logged" [] =<< stub.stubLog,
-      -- INVENTORY: discovery.1.2
+        assertEqual "no request is logged" [] =<< stub.stubLog
+    , -- INVENTORY: discovery.1.2
       "separate resolvers keep separate pollers" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody "hello\n"
         state <- stateWithDownloads [(loopbackHost stub.stubPort, hashPart)]
@@ -1188,15 +1186,15 @@ tests = do
         void (secondResolver state)
         Concurrent.threadDelay 1_500_000
         requests <- infoRequests stub
-        assertEqual "one poll per resolver" 2 (length requests),
-      -- INVENTORY: discovery.1.3
+        assertEqual "one poll per resolver" 2 (length requests)
+    , -- INVENTORY: discovery.1.3
       "non-loopback state is unchanged" ~: do
         base <- baseState
         let state = addRunning (Host Nothing Nothing "10.0.0.1") hashPart base
         resolver <- newResolver
         resolved <- resolver state
-        assertEqual "state is unchanged" state resolved,
-      -- INVENTORY: discovery.1.4
+        assertEqual "state is unchanged" state resolved
+    , -- INVENTORY: discovery.1.4
       "resolver ignores proxy environment variables" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody proxyInfo
         state <- stateWithDownloads [(loopbackHost stub.stubPort, hashPart)]
@@ -1204,8 +1202,8 @@ tests = do
         void (resolver state)
         Concurrent.threadDelay 600_000
         requests <- infoRequests stub
-        assertEqual "the loopback host is reached directly" 1 (length requests),
-      -- INVENTORY: discovery.1.5
+        assertEqual "the loopback host is reached directly" 1 (length requests)
+    , -- INVENTORY: discovery.1.5
       "separate resolvers keep separate source maps" ~: withStub 0 \stubA -> withStub 300_000 \stubB -> do
         stubA.stubSetInfoBody proxyInfo
         stubA.stubSetSourcesBody (sourceLine firstHash "https://a.example.org")
@@ -1222,16 +1220,16 @@ tests = do
         Concurrent.threadDelay 800_000
         combined <-
           stateWithDownloads
-            [ (loopbackHost stubA.stubPort, firstHash),
-              (loopbackHost stubB.stubPort, secondHash)
+            [ (loopbackHost stubA.stubPort, firstHash)
+            , (loopbackHost stubB.stubPort, secondHash)
             ]
         afterA <- resolverA combined
         assertEqual "the first map rewrites its own host" (Just (sourceHost "a.example.org")) (hostOf (MkCacheId 0) afterA)
         assertEqual "the second host is untouched" (Just (loopbackHost stubB.stubPort)) (hostOf (MkCacheId 1) afterA)
         afterB <- resolverB afterA
         assertEqual "the second map rewrites its own host" (Just (sourceHost "b.example.org")) (hostOf (MkCacheId 1) afterB)
-        assertEqual "the first rewrite survives" (Just (sourceHost "a.example.org")) (hostOf (MkCacheId 0) afterB),
-      -- discovery.2 Poller bookkeeping state
+        assertEqual "the first rewrite survives" (Just (sourceHost "a.example.org")) (hostOf (MkCacheId 0) afterB)
+    , -- discovery.2 Poller bookkeeping state
 
       -- INVENTORY: discovery.2.1
       "the first frame records a poller and applies no map" ~: withStub 500_000 \stub -> do
@@ -1243,8 +1241,8 @@ tests = do
         assertEqual "the first frame keeps the proxy host" (Just (loopbackHost stub.stubPort)) (hostOf (MkCacheId 0) resolved)
         Concurrent.threadDelay 1_200_000
         requests <- infoRequests stub
-        assertEqual "exactly one info GET" 1 (length requests),
-      -- INVENTORY: discovery.2.2
+        assertEqual "exactly one info GET" 1 (length requests)
+    , -- INVENTORY: discovery.2.2
       "a host that leaves the state is not polled again" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody "hello\n"
         state <- stateWithDownloads [(loopbackHost stub.stubPort, hashPart)]
@@ -1257,8 +1255,8 @@ tests = do
         void (resolver state)
         Concurrent.threadDelay 1_000_000
         requests <- infoRequests stub
-        assertEqual "one info GET" 1 (length requests),
-      -- INVENTORY: discovery.2.3
+        assertEqual "one info GET" 1 (length requests)
+    , -- INVENTORY: discovery.2.3
       "maps for two hosts apply on the next frame" ~: withStub 0 \stubA -> withStub 0 \stubB -> do
         stubA.stubSetInfoBody proxyInfo
         stubA.stubSetSourcesBody (sourceLine firstHash "https://a.example.org")
@@ -1266,8 +1264,8 @@ tests = do
         stubB.stubSetSourcesBody (sourceLine secondHash "https://b.example.org")
         state <-
           stateWithDownloads
-            [ (loopbackHost stubA.stubPort, firstHash),
-              (loopbackHost stubB.stubPort, secondHash)
+            [ (loopbackHost stubA.stubPort, firstHash)
+            , (loopbackHost stubB.stubPort, secondHash)
             ]
         resolver <- newResolver
         void (resolver state)
@@ -1275,12 +1273,12 @@ tests = do
           awaitHosts
             resolver
             state
-            [ (MkCacheId 0, sourceHost "a.example.org"),
-              (MkCacheId 1, sourceHost "b.example.org")
+            [ (MkCacheId 0, sourceHost "a.example.org")
+            , (MkCacheId 1, sourceHost "b.example.org")
             ]
         assertEqual "the first host is rewritten" (Just (sourceHost "a.example.org")) (hostOf (MkCacheId 0) resolved)
-        assertEqual "the second host is rewritten" (Just (sourceHost "b.example.org")) (hostOf (MkCacheId 1) resolved),
-      -- INVENTORY: discovery.2.4
+        assertEqual "the second host is rewritten" (Just (sourceHost "b.example.org")) (hostOf (MkCacheId 1) resolved)
+    , -- INVENTORY: discovery.2.4
       "bookkeeping updates are atomic" ~: withStub 0 \stubA -> withStub 0 \stubB -> do
         stubA.stubSetInfoBody "hello\n"
         stubB.stubSetInfoBody "hello\n"
@@ -1293,8 +1291,8 @@ tests = do
         requestsA <- infoRequests stubA
         requestsB <- infoRequests stubB
         assertEqual "one poller for the first host" 1 (length requestsA)
-        assertEqual "one poller for the second host" 1 (length requestsB),
-      -- discovery.3 One poller per newly seen loopback download host
+        assertEqual "one poller for the second host" 1 (length requestsB)
+    , -- discovery.3 One poller per newly seen loopback download host
 
       -- INVENTORY: discovery.3.1
       "loopback running download starts exactly one poller" ~: withStub 0 \stub -> do
@@ -1304,15 +1302,15 @@ tests = do
         void (resolver state)
         Concurrent.threadDelay 800_000
         requests <- infoRequests stub
-        assertEqual "one info GET" 1 (length requests),
-      -- INVENTORY: discovery.3.2
+        assertEqual "one info GET" 1 (length requests)
+    , -- INVENTORY: discovery.3.2
       "two loopback hosts start one poller each" ~: withStub 0 \stubA -> withStub 0 \stubB -> do
         stubA.stubSetInfoBody "hello\n"
         stubB.stubSetInfoBody "hello\n"
         state <-
           stateWithDownloads
-            [ (loopbackHost stubA.stubPort, firstHash),
-              (loopbackHost stubB.stubPort, secondHash)
+            [ (loopbackHost stubA.stubPort, firstHash)
+            , (loopbackHost stubB.stubPort, secondHash)
             ]
         resolver <- newResolver
         void (resolver state)
@@ -1320,8 +1318,8 @@ tests = do
         requestsA <- infoRequests stubA
         requestsB <- infoRequests stubB
         assertEqual "one info GET for the first host" 1 (length requestsA)
-        assertEqual "one info GET for the second host" 1 (length requestsB),
-      -- INVENTORY: discovery.3.3
+        assertEqual "one info GET for the second host" 1 (length requestsB)
+    , -- INVENTORY: discovery.3.3
       "a host seen in consecutive frames starts one poller" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody "hello\n"
         state <- stateWithDownloads [(loopbackHost stub.stubPort, hashPart)]
@@ -1331,16 +1329,16 @@ tests = do
           Concurrent.threadDelay 100_000
         Concurrent.threadDelay 500_000
         requests <- infoRequests stub
-        assertEqual "one info GET" 1 (length requests),
-      -- INVENTORY: discovery.3.4
+        assertEqual "one info GET" 1 (length requests)
+    , -- INVENTORY: discovery.3.4
       "a non-loopback host starts no poller" ~: withStub 0 \stub -> do
         base <- baseState
         let state = addRunning (Host Nothing Nothing "10.0.0.1") hashPart base
         resolver <- newResolver
         void (resolver state)
         Concurrent.threadDelay 500_000
-        assertEqual "no request is logged" [] =<< stub.stubLog,
-      -- INVENTORY: discovery.3.5
+        assertEqual "no request is logged" [] =<< stub.stubLog
+    , -- INVENTORY: discovery.3.5
       "a completed download starts a poller" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody "hello\n"
         base <- baseState
@@ -1349,8 +1347,8 @@ tests = do
         void (resolver state)
         Concurrent.threadDelay 800_000
         requests <- infoRequests stub
-        assertEqual "one info GET" 1 (length requests),
-      -- INVENTORY: discovery.3.6
+        assertEqual "one info GET" 1 (length requests)
+    , -- INVENTORY: discovery.3.6
       "resolve returns before the poll completes" ~: withStub 2_000_000 \stub -> do
         state <- stateWithDownloads [(loopbackHost stub.stubPort, hashPart)]
         resolver <- newResolver
@@ -1358,8 +1356,8 @@ tests = do
         void (resolver state)
         finished <- Clock.getMonotonicTime
         assertBool "resolve returns before the delayed answer" (finished - started < 1.0)
-        waitForRequestCount stub 1,
-      -- INVENTORY: discovery.3.7
+        waitForRequestCount stub 1
+    , -- INVENTORY: discovery.3.7
       "a host that leaves the state keeps its poller" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody proxyInfo
         stub.stubSetSourcesBody (sourceLine hashPart "https://cache.nixos.org")
@@ -1375,8 +1373,8 @@ tests = do
         assertBool "three polls happen" (length times >= 3)
         assertBool
           "polls are about one second apart"
-          (all (\(previous, next) -> next - previous > 0.5 && next - previous < 2.0) (zip times (drop 1 times))),
-      -- discovery.4 Resolved source maps applied to the NOM state each frame
+          (all (\(previous, next) -> next - previous > 0.5 && next - previous < 2.0) (zip times (drop 1 times)))
+    , -- discovery.4 Resolved source maps applied to the NOM state each frame
 
       -- INVENTORY: discovery.4.1
       "no stored map leaves the state unchanged" ~: do
@@ -1385,8 +1383,8 @@ tests = do
         let state = addRunning (loopbackHost port) hashPart base
         resolver <- newResolver
         resolved <- resolver state
-        assertEqual "state is unchanged" state resolved,
-      -- INVENTORY: discovery.4.2
+        assertEqual "state is unchanged" state resolved
+    , -- INVENTORY: discovery.4.2
       "a stored map rewrites a download from a later frame" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody proxyInfo
         stub.stubSetSourcesBody (sourceLine firstHash "https://cache.nixos.org")
@@ -1396,8 +1394,8 @@ tests = do
         resolver <- newResolver
         void (resolver earlier)
         resolved <- awaitHosts resolver later [(MkCacheId 0, sourceHost "cache.nixos.org")]
-        assertEqual "the later download is rewritten" (Just (sourceHost "cache.nixos.org")) (hostOf (MkCacheId 0) resolved),
-      -- INVENTORY: discovery.4.3
+        assertEqual "the later download is rewritten" (Just (sourceHost "cache.nixos.org")) (hostOf (MkCacheId 0) resolved)
+    , -- INVENTORY: discovery.4.3
       "a map stored for one host applies to another host" ~: withStub 0 \stubA -> withStub 0 \stubB -> do
         stubA.stubSetInfoBody proxyInfo
         stubA.stubSetSourcesBody (sourceLine firstHash "https://a.example.org")
@@ -1408,30 +1406,30 @@ tests = do
         resolver <- newResolver
         void (resolver earlier)
         resolved <- awaitHosts resolver later [(MkCacheId 0, sourceHost "a.example.org")]
-        assertEqual "the other host's map applies" (Just (sourceHost "a.example.org")) (hostOf (MkCacheId 0) resolved),
-      -- INVENTORY: discovery.4.4
+        assertEqual "the other host's map applies" (Just (sourceHost "a.example.org")) (hostOf (MkCacheId 0) resolved)
+    , -- INVENTORY: discovery.4.4
       "downloads are rewritten by their own path hashes" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody proxyInfo
         stub.stubSetSourcesBody (sourceLine firstHash "https://cache.nixos.org")
         state <-
           stateWithDownloads
-            [ (loopbackHost stub.stubPort, firstHash),
-              (loopbackHost stub.stubPort, secondHash)
+            [ (loopbackHost stub.stubPort, firstHash)
+            , (loopbackHost stub.stubPort, secondHash)
             ]
         resolver <- newResolver
         void (resolver state)
         resolved <- awaitHosts resolver state [(MkCacheId 0, sourceHost "cache.nixos.org")]
         assertEqual "the mapped download is rewritten" (Just (sourceHost "cache.nixos.org")) (hostOf (MkCacheId 0) resolved)
-        assertEqual "the other download keeps the proxy host" (Just (loopbackHost stub.stubPort)) (hostOf (MkCacheId 1) resolved),
-      -- INVENTORY: discovery.4.5
+        assertEqual "the other download keeps the proxy host" (Just (loopbackHost stub.stubPort)) (hostOf (MkCacheId 1) resolved)
+    , -- INVENTORY: discovery.4.5
       "an empty map does not clear another host's map" ~: withStub 0 \stubA -> withStub 0 \stubB -> do
         stubA.stubSetInfoBody proxyInfo
         stubA.stubSetSourcesBody (sourceLine firstHash "https://a.example.org")
         stubB.stubSetInfoBody proxyInfo
         state <-
           stateWithDownloads
-            [ (loopbackHost stubA.stubPort, firstHash),
-              (loopbackHost stubB.stubPort, secondHash)
+            [ (loopbackHost stubA.stubPort, firstHash)
+            , (loopbackHost stubB.stubPort, secondHash)
             ]
         resolver <- newResolver
         void (resolver state)
@@ -1441,8 +1439,8 @@ tests = do
         Concurrent.threadDelay 300_000
         resolved <- resolver state
         assertEqual "the first host is still rewritten" (Just (sourceHost "a.example.org")) (hostOf (MkCacheId 0) resolved)
-        assertEqual "the second host keeps its proxy" (Just (loopbackHost stubB.stubPort)) (hostOf (MkCacheId 1) resolved),
-      -- INVENTORY: discovery.4.6
+        assertEqual "the second host keeps its proxy" (Just (loopbackHost stubB.stubPort)) (hostOf (MkCacheId 1) resolved)
+    , -- INVENTORY: discovery.4.6
       "the map for the smaller base URL wins" ~: withStub 0 \stubA -> withStub 0 \stubB -> do
         stubA.stubSetInfoBody proxyInfo
         stubA.stubSetSourcesBody (sourceLine firstHash "https://a.example.org")
@@ -1450,8 +1448,8 @@ tests = do
         stubB.stubSetSourcesBody (sourceLine firstHash "https://b.example.org")
         state <-
           stateWithDownloads
-            [ (loopbackHost stubA.stubPort, firstHash),
-              (loopbackHost stubB.stubPort, firstHash)
+            [ (loopbackHost stubA.stubPort, firstHash)
+            , (loopbackHost stubB.stubPort, firstHash)
             ]
         let baseA = "http://127.0.0.1:" <> Text.pack (show stubA.stubPort)
             baseB = "http://127.0.0.1:" <> Text.pack (show stubB.stubPort)
@@ -1462,8 +1460,8 @@ tests = do
         waitForRequestCount stubB 2
         Concurrent.threadDelay 300_000
         resolved <- resolver state
-        assertEqual "the smaller base URL wins" (Just winner) (hostOf (MkCacheId 0) resolved),
-      -- discovery.5 Poll cycle fetches info then sources and stores the parsed map
+        assertEqual "the smaller base URL wins" (Just winner) (hostOf (MkCacheId 0) resolved)
+    , -- discovery.5 Poll cycle fetches info then sources and stores the parsed map
 
       -- INVENTORY: discovery.5.1
       "info is fetched before sources" ~: withStub 0 \stub -> do
@@ -1474,8 +1472,8 @@ tests = do
         void (resolver state)
         waitForRequestCount stub 2
         targets <- requestTargets stub
-        assertEqual "info then sources" [infoPath, sourcesPath] (take 2 targets),
-      -- INVENTORY: discovery.5.2
+        assertEqual "info then sources" [infoPath, sourcesPath] (take 2 targets)
+    , -- INVENTORY: discovery.5.2
       "the sources body is applied on the following frame" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody proxyInfo
         stub.stubSetSourcesBody (sourceLine firstHash "https://cache.nixos.org")
@@ -1483,8 +1481,8 @@ tests = do
         resolver <- newResolver
         void (resolver state)
         resolved <- awaitHosts resolver state [(MkCacheId 0, sourceHost "cache.nixos.org")]
-        assertEqual "the mapped host replaces the proxy" (Just (sourceHost "cache.nixos.org")) (hostOf (MkCacheId 0) resolved),
-      -- INVENTORY: discovery.5.3
+        assertEqual "the mapped host replaces the proxy" (Just (sourceHost "cache.nixos.org")) (hostOf (MkCacheId 0) resolved)
+    , -- INVENTORY: discovery.5.3
       "an empty sources body stores an empty map" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody proxyInfo
         state <- stateWithDownloads [(loopbackHost stub.stubPort, hashPart)]
@@ -1495,8 +1493,8 @@ tests = do
         resolved <- resolver state
         assertEqual "the host is untouched" (Just (loopbackHost stub.stubPort)) (hostOf (MkCacheId 0) resolved)
         requests <- sourcesRequests stub
-        assertBool "a sources GET happened" (not (null requests)),
-      -- INVENTORY: discovery.5.4
+        assertBool "a sources GET happened" (not (null requests))
+    , -- INVENTORY: discovery.5.4
       "a later cycle replaces the stored map" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody proxyInfo
         stub.stubSetSourcesBody (sourceLine firstHash "https://a.example.org")
@@ -1507,8 +1505,8 @@ tests = do
         stub.stubSetSourcesBody (sourceLine firstHash "https://b.example.org")
         Concurrent.threadDelay 1_500_000
         resolved <- resolver state
-        assertEqual "the new map replaces the old one" (Just (sourceHost "b.example.org")) (hostOf (MkCacheId 0) resolved),
-      -- INVENTORY: discovery.5.5
+        assertEqual "the new map replaces the old one" (Just (sourceHost "b.example.org")) (hostOf (MkCacheId 0) resolved)
+    , -- INVENTORY: discovery.5.5
       "a successful cycle repeats after one second" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody proxyInfo
         stub.stubSetSourcesBody (sourceLine firstHash "https://cache.nixos.org")
@@ -1521,8 +1519,8 @@ tests = do
         assertBool "at least two info GETs" (length times >= 2)
         assertBool
           "the second info GET is about one second later"
-          (case take 2 times of [earlier, later] -> later - earlier > 0.5 && later - earlier < 2.0; _ -> False),
-      -- INVENTORY: discovery.5.6
+          (case take 2 times of [earlier, later] -> later - earlier > 0.5 && later - earlier < 2.0; _ -> False)
+    , -- INVENTORY: discovery.5.6
       "maps are keyed by base URL" ~: withStub 0 \stubA -> withStub 0 \stubB -> do
         stubA.stubSetInfoBody proxyInfo
         stubA.stubSetSourcesBody (sourceLine firstHash "https://a.example.org")
@@ -1530,8 +1528,8 @@ tests = do
         stubB.stubSetSourcesBody (sourceLine secondHash "https://b.example.org")
         state <-
           stateWithDownloads
-            [ (loopbackHost stubA.stubPort, firstHash),
-              (loopbackHost stubB.stubPort, secondHash)
+            [ (loopbackHost stubA.stubPort, firstHash)
+            , (loopbackHost stubB.stubPort, secondHash)
             ]
         resolver <- newResolver
         void (resolver state)
@@ -1539,12 +1537,12 @@ tests = do
           awaitHosts
             resolver
             state
-            [ (MkCacheId 0, sourceHost "a.example.org"),
-              (MkCacheId 1, sourceHost "b.example.org")
+            [ (MkCacheId 0, sourceHost "a.example.org")
+            , (MkCacheId 1, sourceHost "b.example.org")
             ]
         assertEqual "the first host uses its own map" (Just (sourceHost "a.example.org")) (hostOf (MkCacheId 0) resolved)
-        assertEqual "the second host uses its own map" (Just (sourceHost "b.example.org")) (hostOf (MkCacheId 1) resolved),
-      -- discovery.6 Failed info poll retries, a sources failure refreshes
+        assertEqual "the second host uses its own map" (Just (sourceHost "b.example.org")) (hostOf (MkCacheId 1) resolved)
+    , -- discovery.6 Failed info poll retries, a sources failure refreshes
 
       -- INVENTORY: discovery.6.1
       "a failed info request retries after five seconds" ~: withStub 0 \stub -> do
@@ -1563,8 +1561,8 @@ tests = do
         assertEqual "no sources GET" 0 (length sources)
         assertEqual "the host is untouched" (Just (loopbackHost stub.stubPort)) (hostOf (MkCacheId 0) resolved)
         resolvedLater <- resolver state
-        assertEqual "the host is still untouched" (Just (loopbackHost stub.stubPort)) (hostOf (MkCacheId 0) resolvedLater),
-      -- INVENTORY: discovery.6.2
+        assertEqual "the host is still untouched" (Just (loopbackHost stub.stubPort)) (hostOf (MkCacheId 0) resolvedLater)
+    , -- INVENTORY: discovery.6.2
       "info without proxy markers retries without fetching sources" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody "hello\n"
         state <- stateWithDownloads [(loopbackHost stub.stubPort, hashPart)]
@@ -1574,8 +1572,8 @@ tests = do
         requests <- infoRequests stub
         sources <- sourcesRequests stub
         assertEqual "two info GETs" 2 (length requests)
-        assertEqual "no sources GET" 0 (length sources),
-      -- INVENTORY: discovery.6.3
+        assertEqual "no sources GET" 0 (length sources)
+    , -- INVENTORY: discovery.6.3
       "a sources 500 stores an empty map and info keeps refreshing" ~: withStub 100_000 \stub -> do
         stub.stubSetInfoBody proxyInfo
         stub.stubSetSourcesBody (sourceLine firstHash "https://cache.nixos.org")
@@ -1591,8 +1589,8 @@ tests = do
         afterFailure <- resolver state
         assertEqual "the empty 500 body replaces the map" (Just (loopbackHost stub.stubPort)) (hostOf (MkCacheId 0) afterFailure)
         requests <- infoRequests stub
-        assertBool "three info GETs in three seconds" (length requests >= 3),
-      -- INVENTORY: discovery.6.4
+        assertBool "three info GETs in three seconds" (length requests >= 3)
+    , -- INVENTORY: discovery.6.4
       "a host that starts failing keeps its last good map" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody proxyInfo
         stub.stubSetSourcesBody (sourceLine firstHash "https://cache.nixos.org")
@@ -1607,8 +1605,8 @@ tests = do
         assertEqual "the map survives the failure" (Just (sourceHost "cache.nixos.org")) (hostOf (MkCacheId 0) afterFailure)
         Concurrent.threadDelay 1_500_000
         muchLater <- resolver state
-        assertEqual "the map still survives" (Just (sourceHost "cache.nixos.org")) (hostOf (MkCacheId 0) muchLater),
-      -- INVENTORY: discovery.6.5
+        assertEqual "the map still survives" (Just (sourceHost "cache.nixos.org")) (hostOf (MkCacheId 0) muchLater)
+    , -- INVENTORY: discovery.6.5
       "retries continue indefinitely" ~: withStub 0 \stub -> do
         stub.stubSetInfoStatus 500
         state <- stateWithDownloads [(loopbackHost stub.stubPort, hashPart)]
@@ -1620,8 +1618,8 @@ tests = do
         assertBool "four info GETs" (length times >= 4)
         assertBool
           "about five seconds apart"
-          (all (\(earlier, later) -> later - earlier > 3.0 && later - earlier < 8.0) (zip times (drop 1 times))),
-      -- discovery.7 HTTP failure is swallowed as a missing body
+          (all (\(earlier, later) -> later - earlier > 3.0 && later - earlier < 8.0) (zip times (drop 1 times)))
+    , -- discovery.7 HTTP failure is swallowed as a missing body
 
       -- INVENTORY: discovery.7.1
       "a refused connection yields a missing body" ~: do
@@ -1630,8 +1628,8 @@ tests = do
         let state = addRunning (loopbackHost port) hashPart base
         resolver <- newResolver
         resolved <- resolver state
-        assertEqual "state is unchanged" state resolved,
-      -- INVENTORY: discovery.7.2
+        assertEqual "state is unchanged" state resolved
+    , -- INVENTORY: discovery.7.2
       "a 404 info response yields a missing body" ~: withStub 0 \stub -> do
         stub.stubSetInfoStatus 404
         state <- stateWithDownloads [(loopbackHost stub.stubPort, hashPart)]
@@ -1644,8 +1642,8 @@ tests = do
         assertEqual "no sources GET" 0 (length sources)
         assertEqual "the host is untouched" (Just (loopbackHost stub.stubPort)) (hostOf (MkCacheId 0) resolved)
         resolvedLater <- resolver state
-        assertEqual "the host is still untouched" (Just (loopbackHost stub.stubPort)) (hostOf (MkCacheId 0) resolvedLater),
-      -- INVENTORY: discovery.7.3
+        assertEqual "the host is still untouched" (Just (loopbackHost stub.stubPort)) (hostOf (MkCacheId 0) resolvedLater)
+    , -- INVENTORY: discovery.7.3
       "a stalled response yields a missing body" ~: withStub 5_000_000 \stub -> do
         stub.stubSetInfoBody proxyInfo
         state <- stateWithDownloads [(loopbackHost stub.stubPort, hashPart)]
@@ -1659,15 +1657,15 @@ tests = do
         assertBool
           "about six seconds apart"
           (case times of [earlier, later] -> later - earlier > 3.0 && later - earlier < 10.0; _ -> False)
-        assertEqual "no sources GET" 0 (length sources),
-      -- INVENTORY: discovery.7.4
+        assertEqual "no sources GET" 0 (length sources)
+    , -- INVENTORY: discovery.7.4
       "a malformed host URL yields a missing body" ~: do
         base <- baseState
         let state = addRunning (Host Nothing Nothing "127.0.0.1:notaport") hashPart base
         resolver <- newResolver
         resolved <- resolver state
-        assertEqual "state is unchanged" state resolved,
-      -- INVENTORY: discovery.7.5
+        assertEqual "state is unchanged" state resolved
+    , -- INVENTORY: discovery.7.5
       "an empty 200 info body yields an empty body" ~: withStub 0 \stub -> do
         state <- stateWithDownloads [(loopbackHost stub.stubPort, hashPart)]
         resolver <- newResolver
@@ -1679,22 +1677,22 @@ tests = do
         assertEqual "no sources GET" 0 (length sources)
         assertEqual "the host is untouched" (Just (loopbackHost stub.stubPort)) (hostOf (MkCacheId 0) resolved)
         resolvedLater <- resolver state
-        assertEqual "the host is still untouched" (Just (loopbackHost stub.stubPort)) (hostOf (MkCacheId 0) resolvedLater),
-      -- discovery.8 Poll timing constants
+        assertEqual "the host is still untouched" (Just (loopbackHost stub.stubPort)) (hostOf (MkCacheId 0) resolvedLater)
+    , -- discovery.8 Poll timing constants
 
       -- INVENTORY: discovery.8.1
       "the request timeout is one second" ~: do
         contents <- readCacheDiscoverySource
-        assertBool "requestTimeout is 1_000_000" ("requestTimeout = 1_000_000" `Text.isInfixOf` contents),
-      -- INVENTORY: discovery.8.2
+        assertBool "requestTimeout is 1_000_000" ("requestTimeout = 1_000_000" `Text.isInfixOf` contents)
+    , -- INVENTORY: discovery.8.2
       "the refresh interval is one second" ~: do
         contents <- readCacheDiscoverySource
-        assertBool "refreshInterval is 1_000_000" ("refreshInterval = 1_000_000" `Text.isInfixOf` contents),
-      -- INVENTORY: discovery.8.3
+        assertBool "refreshInterval is 1_000_000" ("refreshInterval = 1_000_000" `Text.isInfixOf` contents)
+    , -- INVENTORY: discovery.8.3
       "the retry interval is five seconds" ~: do
         contents <- readCacheDiscoverySource
-        assertBool "retryInterval is 5_000_000" ("retryInterval = 5_000_000" `Text.isInfixOf` contents),
-      -- protocol.1 Info endpoint path
+        assertBool "retryInterval is 5_000_000" ("retryInterval = 5_000_000" `Text.isInfixOf` contents)
+    , -- protocol.1 Info endpoint path
 
       -- INVENTORY: protocol.1.1
       "the poller requests exactly the info path" ~: withStub 0 \stub -> do
@@ -1705,8 +1703,8 @@ tests = do
         void (resolver state)
         waitForRequestCount stub 1
         targets <- requestTargets stub
-        assertEqual "single info target" (Just "/.nix-cache-discovery/v1/info") (listToMaybe targets),
-      -- INVENTORY: protocol.1.2
+        assertEqual "single info target" (Just "/.nix-cache-discovery/v1/info") (listToMaybe targets)
+    , -- INVENTORY: protocol.1.2
       "the info path is joined without a doubled slash" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody proxyInfo
         state <-
@@ -1717,8 +1715,8 @@ tests = do
         waitForRequestCount stub 1
         targets <- requestTargets stub
         assertEqual "single slash" (Just "/.nix-cache-discovery/v1/info") (listToMaybe targets)
-        assertBool "no doubled slash" (all (not . Text.isInfixOf "//") targets),
-      -- INVENTORY: protocol.1.3
+        assertBool "no doubled slash" (not (any (Text.isInfixOf "//") targets))
+    , -- INVENTORY: protocol.1.3
       "the info request carries no query string" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody proxyInfo
         state <- stateWithDownloads [(loopbackHost stub.stubPort, hashPart)]
@@ -1727,8 +1725,8 @@ tests = do
         waitForRequestCount stub 1
         targets <- map snd <$> infoRequests stub
         assertEqual "one info target" 1 (length targets)
-        assertBool "no query string" (all (not . Text.isInfixOf "?") targets),
-      -- protocol.2 Sources endpoint path
+        assertBool "no query string" (not (any (Text.isInfixOf "?") targets))
+    , -- protocol.2 Sources endpoint path
 
       -- INVENTORY: protocol.2.1
       "the poller requests exactly the sources path" ~: withStub 0 \stub -> do
@@ -1739,8 +1737,8 @@ tests = do
         void (resolver state)
         waitForRequestCount stub 2
         targets <- requestTargets stub
-        assertEqual "single sources target" (Just "/.nix-cache-discovery/v1/sources") (listToMaybe (drop 1 targets)),
-      -- INVENTORY: protocol.2.2
+        assertEqual "single sources target" (Just "/.nix-cache-discovery/v1/sources") (listToMaybe (drop 1 targets))
+    , -- INVENTORY: protocol.2.2
       "sources is requested only after the info body is accepted" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody "hello\n"
         state <- stateWithDownloads [(loopbackHost stub.stubPort, hashPart)]
@@ -1750,8 +1748,8 @@ tests = do
         requests <- infoRequests stub
         sources <- sourcesRequests stub
         assertEqual "no sources GET" 0 (length sources)
-        assertEqual "two info GETs" 2 (length requests),
-      -- INVENTORY: protocol.2.3
+        assertEqual "two info GETs" 2 (length requests)
+    , -- INVENTORY: protocol.2.3
       "the sources request carries no query string" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody proxyInfo
         stub.stubSetSourcesBody (sourceLine firstHash "https://cache.nixos.org")
@@ -1761,8 +1759,8 @@ tests = do
         waitForRequestCount stub 2
         targets <- map snd <$> sourcesRequests stub
         assertEqual "one sources target" 1 (length targets)
-        assertBool "no query string" (all (not . Text.isInfixOf "?") targets),
-      -- protocol.3 Proxy info body recognition
+        assertBool "no query string" (not (any (Text.isInfixOf "?") targets))
+    , -- protocol.3 Proxy info body recognition
 
       -- INVENTORY: protocol.3.1
       "both markers in one body are accepted" ~: withStub 0 \stub -> do
@@ -1773,8 +1771,8 @@ tests = do
         void (resolver state)
         waitForRequestCount stub 2
         sources <- sourcesRequests stub
-        assertEqual "sources is requested once" 1 (length sources),
-      -- INVENTORY: protocol.3.2
+        assertEqual "sources is requested once" 1 (length sources)
+    , -- INVENTORY: protocol.3.2
       "a body with version=1 and no id= is rejected" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody "version=1\n"
         state <- stateWithDownloads [(loopbackHost stub.stubPort, hashPart)]
@@ -1784,8 +1782,8 @@ tests = do
         requests <- infoRequests stub
         sources <- sourcesRequests stub
         assertEqual "no sources GET" 0 (length sources)
-        assertEqual "two info GETs" 2 (length requests),
-      -- INVENTORY: protocol.3.3
+        assertEqual "two info GETs" 2 (length requests)
+    , -- INVENTORY: protocol.3.3
       "a body with id= and no version=1 is rejected" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody "id=abc\n"
         state <- stateWithDownloads [(loopbackHost stub.stubPort, hashPart)]
@@ -1795,8 +1793,8 @@ tests = do
         requests <- infoRequests stub
         sources <- sourcesRequests stub
         assertEqual "no sources GET" 0 (length sources)
-        assertEqual "two info GETs" 2 (length requests),
-      -- INVENTORY: protocol.3.4
+        assertEqual "two info GETs" 2 (length requests)
+    , -- INVENTORY: protocol.3.4
       "an empty info body is rejected" ~: withStub 0 \stub -> do
         state <- stateWithDownloads [(loopbackHost stub.stubPort, hashPart)]
         resolver <- newResolver
@@ -1805,8 +1803,8 @@ tests = do
         requests <- infoRequests stub
         sources <- sourcesRequests stub
         assertEqual "no sources GET" 0 (length sources)
-        assertEqual "two info GETs" 2 (length requests),
-      -- INVENTORY: protocol.3.5
+        assertEqual "two info GETs" 2 (length requests)
+    , -- INVENTORY: protocol.3.5
       "markers split across lines are accepted" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody "id=abc\nversion=1\n"
         stub.stubSetSourcesBody (sourceLine firstHash "https://cache.nixos.org")
@@ -1815,8 +1813,8 @@ tests = do
         void (resolver state)
         waitForRequestCount stub 2
         sources <- sourcesRequests stub
-        assertEqual "sources is requested once" 1 (length sources),
-      -- INVENTORY: protocol.3.6
+        assertEqual "sources is requested once" 1 (length sources)
+    , -- INVENTORY: protocol.3.6
       "version=10 is accepted through the version=1 prefix" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody "version=10\nid=abc\n"
         stub.stubSetSourcesBody (sourceLine firstHash "https://cache.nixos.org")
@@ -1825,8 +1823,8 @@ tests = do
         void (resolver state)
         waitForRequestCount stub 2
         sources <- sourcesRequests stub
-        assertEqual "sources is requested once" 1 (length sources),
-      -- INVENTORY: protocol.3.7
+        assertEqual "sources is requested once" 1 (length sources)
+    , -- INVENTORY: protocol.3.7
       "the marker match is case sensitive" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody "VERSION=1\nid=abc\n"
         state <- stateWithDownloads [(loopbackHost stub.stubPort, hashPart)]
@@ -1836,8 +1834,8 @@ tests = do
         requests <- infoRequests stub
         sources <- sourcesRequests stub
         assertEqual "no sources GET" 0 (length sources)
-        assertEqual "two info GETs" 2 (length requests),
-      "a non-UTF-8 body is retried like a non-proxy body" ~: withStub 0 \stub -> do
+        assertEqual "two info GETs" 2 (length requests)
+    , "a non-UTF-8 body is retried like a non-proxy body" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody (ByteString.pack [0xff, 0xfe])
         state <- stateWithDownloads [(loopbackHost stub.stubPort, hashPart)]
         resolver <- newResolver
@@ -1846,85 +1844,85 @@ tests = do
         requests <- infoRequests stub
         sources <- sourcesRequests stub
         assertEqual "two info GETs" 2 (length requests)
-        assertEqual "no sources GET" 0 (length sources),
-      -- protocol.4 Proxy base URL from a loopback host
+        assertEqual "no sources GET" 0 (length sources)
+    , -- protocol.4 Proxy base URL from a loopback host
 
       -- INVENTORY: protocol.4.2
       "a host without a protocol defaults to http" ~: do
         base <- baseState
         let state = addRunning (Host Nothing Nothing "127.0.0.1:5055") hashPart base
-        assertEqual "http candidate" (Set.singleton "http://127.0.0.1:5055") (proxyCandidates state),
-      -- INVENTORY: protocol.4.3
+        assertEqual "http candidate" (Set.singleton "http://127.0.0.1:5055") (proxyCandidates state)
+    , -- INVENTORY: protocol.4.3
       "an https host keeps its protocol" ~: do
         base <- baseState
         let state = addRunning (Host (Just "https") Nothing "127.0.0.1:5055") hashPart base
-        assertEqual "https candidate" (Set.singleton "https://127.0.0.1:5055") (proxyCandidates state),
-      -- INVENTORY: protocol.4.4
+        assertEqual "https candidate" (Set.singleton "https://127.0.0.1:5055") (proxyCandidates state)
+    , -- INVENTORY: protocol.4.4
       "trailing slashes are stripped" ~: do
         base <- baseState
         let state = addRunning (Host Nothing Nothing "127.0.0.1:5055///") hashPart base
-        assertEqual "slash free candidate" (Set.singleton "http://127.0.0.1:5055") (proxyCandidates state),
-      -- INVENTORY: protocol.4.5
+        assertEqual "slash free candidate" (Set.singleton "http://127.0.0.1:5055") (proxyCandidates state)
+    , -- INVENTORY: protocol.4.5
       "an IPv6 loopback host keeps its brackets" ~: do
         base <- baseState
         let state = addRunning (Host Nothing Nothing "[::1]:5055") hashPart base
-        assertEqual "bracketed candidate" (Set.singleton "http://[::1]:5055") (proxyCandidates state),
-      -- INVENTORY: protocol.4.6
+        assertEqual "bracketed candidate" (Set.singleton "http://[::1]:5055") (proxyCandidates state)
+    , -- INVENTORY: protocol.4.6
       "a host without a port yields no port" ~: do
         base <- baseState
         let state = addRunning (Host Nothing Nothing "127.0.0.1") hashPart base
-        assertEqual "port free candidate" (Set.singleton "http://127.0.0.1") (proxyCandidates state),
-      -- protocol.5 Loopback host prefix set
+        assertEqual "port free candidate" (Set.singleton "http://127.0.0.1") (proxyCandidates state)
+    , -- protocol.5 Loopback host prefix set
 
       -- INVENTORY: protocol.5.1
       "127.0.0.0/8 outside 127.0.0.1 is loopback" ~: do
         base <- baseState
         let state = addRunning (Host Nothing Nothing "127.1.2.3:5055") hashPart base
-        assertEqual "loopback candidate" (Set.singleton "http://127.1.2.3:5055") (proxyCandidates state),
-      -- INVENTORY: protocol.5.2
+        assertEqual "loopback candidate" (Set.singleton "http://127.1.2.3:5055") (proxyCandidates state)
+    , -- INVENTORY: protocol.5.2
       "localhost is loopback" ~: do
         base <- baseState
         let state = addRunning (Host Nothing Nothing "localhost:5000") hashPart base
-        assertEqual "localhost candidate" (Set.singleton "http://localhost:5000") (proxyCandidates state),
-      -- INVENTORY: protocol.5.3
+        assertEqual "localhost candidate" (Set.singleton "http://localhost:5000") (proxyCandidates state)
+    , -- INVENTORY: protocol.5.3
       "[::1] and ::1 are loopback" ~: do
         base <- baseState
         let bracketed = addRunning (Host Nothing Nothing "[::1]:5055") hashPart base
             bare = addRunning (Host Nothing Nothing "::1") hashPart base
         assertEqual "bracketed candidate" (Set.singleton "http://[::1]:5055") (proxyCandidates bracketed)
-        assertEqual "bare candidate" (Set.singleton "http://::1") (proxyCandidates bare),
-      -- INVENTORY: protocol.5.4
+        assertEqual "bare candidate" (Set.singleton "http://::1") (proxyCandidates bare)
+    , -- INVENTORY: protocol.5.4
       "a host starting with localhost is loopback" ~: do
         base <- baseState
         let state = addRunning (Host Nothing Nothing "localhost.evil:5000") hashPart base
-        assertEqual "prefix match candidate" (Set.singleton "http://localhost.evil:5000") (proxyCandidates state),
-      -- INVENTORY: protocol.5.5
+        assertEqual "prefix match candidate" (Set.singleton "http://localhost.evil:5000") (proxyCandidates state)
+    , -- INVENTORY: protocol.5.5
       "a 10.x host is not loopback" ~: do
         base <- baseState
         let state = addRunning (Host Nothing Nothing "10.0.0.1") hashPart base
-        assertEqual "no candidate" Set.empty (proxyCandidates state),
-      -- INVENTORY: protocol.5.6
+        assertEqual "no candidate" Set.empty (proxyCandidates state)
+    , -- INVENTORY: protocol.5.6
       "a 192.168.x host is not loopback" ~: do
         base <- baseState
         let state = addRunning (Host Nothing Nothing "192.168.1.1") hashPart base
-        assertEqual "no candidate" Set.empty (proxyCandidates state),
-      -- INVENTORY: protocol.5.7
+        assertEqual "no candidate" Set.empty (proxyCandidates state)
+    , -- INVENTORY: protocol.5.7
       "uppercase LOCALHOST is not loopback" ~: do
         base <- baseState
         let state = addRunning (Host Nothing Nothing "LOCALHOST") hashPart base
-        assertEqual "no candidate" Set.empty (proxyCandidates state),
-      -- INVENTORY: protocol.5.8
+        assertEqual "no candidate" Set.empty (proxyCandidates state)
+    , -- INVENTORY: protocol.5.8
       "a host starting with ::2 is not loopback" ~: do
         base <- baseState
         let state = addRunning (Host Nothing Nothing "::2") hashPart base
-        assertEqual "no candidate" Set.empty (proxyCandidates state),
-      -- package.1 Library exposes the CacheDiscovery modules
+        assertEqual "no candidate" Set.empty (proxyCandidates state)
+    , -- package.1 Library exposes the CacheDiscovery modules
 
       -- INVENTORY: package.1.3
       "a single consumer imports both library modules" ~: do
         void CacheDiscovery.newResolver
-        assertEqual "the source map parser is available" Map.empty (SourceMap.parseSourceMap ""),
-      -- INVENTORY: package.1.4
+        assertEqual "the source map parser is available" Map.empty (SourceMap.parseSourceMap "")
+    , -- INVENTORY: package.1.4
       "the exposed module list matches the library files" ~: do
         cabalFile <- readRepoText ["nix-output-monitor.cabal", "nix-output-monitor/nix-output-monitor.cabal"]
         libraryDirectory <- readRepoDirectory ["lib", "nix-output-monitor/lib"]
@@ -1932,8 +1930,8 @@ tests = do
         assertEqual
           "the exposed modules are exactly the library files"
           (Set.fromList (exposedModules cabalFile))
-          (Set.fromList modules),
-      -- package.2 http-client and http-client-tls in the shared build-depends
+          (Set.fromList modules)
+    , -- package.2 http-client and http-client-tls in the shared build-depends
 
       -- INVENTORY: package.2.3
       "the executable inherits both HTTP dependencies" ~: do
@@ -1944,8 +1942,8 @@ tests = do
         assertBool "http-client is in the shared build-depends" ("http-client" `elem` sharedDependencies)
         assertBool "http-client-tls is in the shared build-depends" ("http-client-tls" `elem` sharedDependencies)
         assertBool "the executable imports the exes stanza" ("exes" `elem` executableImports)
-        assertBool "the exes stanza imports common-config" ("common-config" `elem` exesImports),
-      -- INVENTORY: package.2.4
+        assertBool "the exes stanza imports common-config" ("common-config" `elem` exesImports)
+    , -- INVENTORY: package.2.4
       "the test suite inherits both HTTP dependencies" ~: do
         cabalFile <- readRepoText ["nix-output-monitor.cabal", "nix-output-monitor/nix-output-monitor.cabal"]
         let sharedDependencies = cabalField cabalFile "common common-config" "build-depends:"
@@ -1954,20 +1952,20 @@ tests = do
         assertBool "http-client is in the shared build-depends" ("http-client" `elem` sharedDependencies)
         assertBool "http-client-tls is in the shared build-depends" ("http-client-tls" `elem` sharedDependencies)
         assertBool "the suite imports the tests stanza" ("tests" `elem` suiteImports)
-        assertBool "the tests stanza imports exes" ("exes" `elem` testsImports),
-      -- test.1 Suite exits nonzero when any HUnit case fails
+        assertBool "the tests stanza imports exes" ("exes" `elem` testsImports)
+    , -- test.1 Suite exits nonzero when any HUnit case fails
 
       -- INVENTORY: test.1.2
       "a failing case yields a failing suite exit" ~: do
         counts <- runTestTT (test (assertEqual "deliberate failure" (1 :: Int) 2))
         assertEqual "one failure is counted" 1 (failures counts)
-        assertBool "the suite exits nonzero" (not (suiteSucceeds counts)),
-      -- INVENTORY: test.1.3
+        assertBool "the suite exits nonzero" (not (suiteSucceeds counts))
+    , -- INVENTORY: test.1.3
       "an erroring case yields a failing suite exit" ~: do
         counts <- runTestTT (test (Exception.throwIO (Exception.ErrorCall "boom") :: IO ()))
         assertEqual "one error is counted" 1 (errors counts)
-        assertBool "the suite exits nonzero" (not (suiteSucceeds counts)),
-      -- INVENTORY: test.1.5
+        assertBool "the suite exits nonzero" (not (suiteSucceeds counts))
+    , -- INVENTORY: test.1.5
       "a failing case is reported with its label" ~: do
         output <-
           captureStderr do
