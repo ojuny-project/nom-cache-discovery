@@ -11,4 +11,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: cachix/install-nix-action@v31
+      # INVENTORY: package.4.1
+      # INVENTORY: package.4.2
+      # INVENTORY: package.4.3
+      # INVENTORY: package.4.5
       - run: nix flake check

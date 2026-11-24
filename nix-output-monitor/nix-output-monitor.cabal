@@ -171,8 +171,10 @@ common tests
   import: exes
   build-depends:
     HUnit,
+    network,
     nix-output-monitor,
     typed-process,
+    unix,
 
 test-suite unit-tests
   import: tests

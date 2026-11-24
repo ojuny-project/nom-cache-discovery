@@ -9,7 +9,9 @@ import Data.Set qualified as Set
 import Data.Text qualified as Text
 import NOM.CacheDiscovery.SourceMap (SourceMap, parseSourceMap, proxyCandidates, rewriteState)
 import NOM.State (NOMState)
+-- INVENTORY: package.2.1
 import Network.HTTP.Client (Manager, httpLbs, managerResponseTimeout, managerSetProxy, newManager, noProxy, parseRequest, responseBody, responseTimeoutMicro)
+-- INVENTORY: package.2.2
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Relude
 

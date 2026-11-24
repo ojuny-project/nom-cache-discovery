@@ -1,7 +1,8 @@
+# INVENTORY: package.3.4
 { mkDerivation, ansi-terminal, async, attoparsec, base, bytestring
 , cassava, containers, directory, doctest-parallel, extra, filelock
 , filepath, fsnotify, hermes-json, http-client, http-client-tls
-, HUnit, lib, nix-derivation, optics, random, relude, safe
+, HUnit, lib, network, nix-derivation, optics, random, relude, safe
 , safe-exceptions, stm, streamly-core, strict, template-haskell
 , terminal-size, text, time, transformers, typed-process, unix
 , word8
@@ -12,6 +13,7 @@ mkDerivation {
   src = ./.;
   isLibrary = true;
   isExecutable = true;
+  # INVENTORY: package.3.1
   libraryHaskellDepends = [
     ansi-terminal async attoparsec base bytestring cassava containers
     directory extra filelock filepath fsnotify hermes-json http-client
@@ -29,10 +31,10 @@ mkDerivation {
   testHaskellDepends = [
     ansi-terminal async attoparsec base bytestring cassava containers
     directory doctest-parallel extra filelock filepath fsnotify
-    hermes-json http-client http-client-tls HUnit nix-derivation optics
-    random relude safe safe-exceptions stm streamly-core strict
-    template-haskell terminal-size text time transformers typed-process
-    word8
+    hermes-json http-client http-client-tls HUnit network
+    nix-derivation optics random relude safe safe-exceptions stm
+    streamly-core strict template-haskell terminal-size text time
+    transformers typed-process unix word8
   ];
   homepage = "https://code.maralorn.de/maralorn/nix-output-monitor";
   description = "Processes output of Nix commands to show helpful and pretty information";

@@ -9,6 +9,7 @@ import Data.Text.IO (hPutStrLn)
 import Data.Time (ZonedTime)
 import Data.Version (showVersion)
 import GHC.IO.Exception (ExitCode (ExitFailure))
+-- INVENTORY: package.1.1
 import NOM.CacheDiscovery qualified as CacheDiscovery
 import NOM.Error (NOMError)
 import NOM.IO (interact)

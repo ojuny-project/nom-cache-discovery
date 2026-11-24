@@ -83,6 +83,10 @@
           inherit system;
           overlays = lib.attrValues self.overlays;
         };
+        packageChecks = import ./nix-output-monitor/test/package-checks.nix {
+          inherit pkgs lib;
+          src = ./.;
+        };
       in
       rec {
         packages = {
@@ -133,7 +137,37 @@
               typos.enable = true;
             };
           };
+          release-workflow =
+            pkgs.runCommand "nom-release-workflow"
+              {
+                nativeBuildInputs = [
+                  (pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]))
+                  pkgs.coreutils
+                  pkgs.gnugrep
+                ];
+                NCD_SHELL = "${pkgs.bash}/bin/bash";
+                NCD_WORKFLOW = ./.github/workflows/release.yml;
+                NCD_PLAYBOOK = ./nix-output-monitor/test/release/rerun-playbook.md;
+                PYTHONDONTWRITEBYTECODE = "1";
+              }
+              ''
+                python3 ${./nix-output-monitor/test/release/release_tests.py}
+                touch $out
+              '';
+          cli-cache-discovery =
+            pkgs.runCommand "nom-cli-cache-discovery"
+              {
+                nativeBuildInputs = [ pkgs.python3 ];
+                NOM_BIN = "${packages.default}/bin/nom";
+                NCD_REPO = ./.;
+                PYTHONDONTWRITEBYTECODE = "1";
+              }
+              ''
+                python3 ${./nix-output-monitor/test/cli/cli_tests.py}
+                touch $out
+              '';
         }
+        // packageChecks
         // (
           let
             nixPackages =
