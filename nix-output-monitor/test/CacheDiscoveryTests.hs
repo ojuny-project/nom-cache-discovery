@@ -687,8 +687,8 @@ tests = do
     , -- INVENTORY: sourcemap.1.10
       "an empty body yields an empty map" ~: do
         assertEqual "no entries" Map.empty (parseSourceMap "")
-    -- INVENTORY: sourcemap.1.11
-    , "invalid UTF-8 is decoded leniently" ~: do
+    , -- INVENTORY: sourcemap.1.11
+      "invalid UTF-8 is decoded leniently" ~: do
         assertEqual "invalid bytes yield no entries" Map.empty (parseSourceMap (ByteString.pack [0xff, 0xfe]))
     , -- INVENTORY: sourcemap.2.2
       "a completed download is a proxy candidate" ~: do
@@ -1836,8 +1836,8 @@ tests = do
         sources <- sourcesRequests stub
         assertEqual "no sources GET" 0 (length sources)
         assertEqual "two info GETs" 2 (length requests)
-    -- INVENTORY: protocol.3.8
-    , "a non-UTF-8 body is retried like a non-proxy body" ~: withStub 0 \stub -> do
+    , -- INVENTORY: protocol.3.8
+      "a non-UTF-8 body is retried like a non-proxy body" ~: withStub 0 \stub -> do
         stub.stubSetInfoBody (ByteString.pack [0xff, 0xfe])
         state <- stateWithDownloads [(loopbackHost stub.stubPort, hashPart)]
         resolver <- newResolver
