@@ -1,16 +1,19 @@
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 module Main (main) where
 
 import Control.Concurrent qualified as Concurrent
 import Control.Concurrent.STM qualified as STM
 import Control.Exception qualified as Exception
 import Data.ByteString qualified as ByteString
+import Data.Char (isAlphaNum)
+import Data.ByteString.Char8 qualified as ByteString8
 import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
 import Data.Strict qualified as Strict
 import Data.Text qualified as Text
 import Data.Time (ZonedTime)
 import GHC.Clock qualified as Clock
-import NOM.Builds (Derivation (..), FailType (..), Host (..), StorePath (..), storePrefix)
+import NOM.Builds (Derivation (..), FailType (..), Host (..), HostContext (WithContext), StorePath (..), storePrefix)
 -- INVENTORY: package.1.2
 import NOM.CacheDiscovery (newResolver)
 import NOM.CacheDiscovery qualified as CacheDiscovery
@@ -18,7 +21,7 @@ import NOM.CacheDiscovery.SourceMap (parseSourceMap, proxyCandidates, rewriteSta
 import NOM.CacheDiscovery.SourceMap qualified as SourceMap
 import NOM.Error (NOMError)
 import NOM.IO (Stream, interact, processTextStream)
-import NOM.IO.Input (NOMInput (..))
+import NOM.IO.Input (NOMInput (..), UpdateResult (..))
 import NOM.IO.Input.JSON ()
 import NOM.NixMessage.JSON (ActivityId (..), NixJSONMessage)
 import NOM.Print (Config (..))
@@ -255,13 +258,13 @@ captureStdout :: IO () -> IO ByteString
 captureStdout action = do
   temporaryDirectory <- getTemporaryDirectory
   let path = temporaryDirectory <> "/nom-cache-discovery-stdout.log"
-  savedDescriptor <- Posix.dup Posix.stdOut
+  savedDescriptor <- Posix.dup Posix.stdOutput
   targetDescriptor <- Posix.createFile path 0o600
-  void (Posix.dupTo targetDescriptor Posix.stdOut)
+  void (Posix.dupTo targetDescriptor Posix.stdOutput)
   Posix.closeFd targetDescriptor
   captured <-
     (action >> SystemIO.hFlush SystemIO.stdout >> ByteString.readFile path)
-      `Exception.finally` void (Posix.dupTo savedDescriptor Posix.stdOut)
+      `Exception.finally` void (Posix.dupTo savedDescriptor Posix.stdOutput)
   Posix.closeFd savedDescriptor
   pure captured
 
@@ -488,7 +491,7 @@ addBuildsAndPlan state =
         { fullSummary =
             summary
               { completedBuilds = CMap.insert (MkCacheId 5) completedInfo summary.completedBuilds,
-                plannedBuilds = CSet.singleton (MkCacheId 6)
+                plannedBuilds = CSet.fromFoldable [MkCacheId 6]
               }
         }
 
@@ -540,7 +543,7 @@ jsonFinalizer :: (Monad m) => StateT NOMState m ()
 jsonFinalizer = pure ()
 
 runJsonProcess ::
-  Maybe (NOMState -> Maybe Window -> (ZonedTime, Double) -> Text, Handle) ->
+  Maybe (NOMState -> Maybe (Window Int) -> (ZonedTime, Double) -> Text, Handle) ->
   (Double -> NOMState -> NOMState) ->
   (NOMState -> IO NOMState) ->
   NOMState ->
@@ -583,13 +586,13 @@ touchedResolve recording state = do
   writeIORef recording (Just (CSet.size state.touchedIds))
   pure state
 
-countingPrinter :: IORef Int -> NOMState -> Maybe Window -> (ZonedTime, Double) -> Text
+countingPrinter :: IORef Int -> NOMState -> Maybe (Window Int) -> (ZonedTime, Double) -> Text
 countingPrinter counter _ _ _ = UnsafeIO.unsafePerformIO do
   atomicModifyIORef' counter \count -> (count + 1, ())
   pure ""
 {-# NOINLINE countingPrinter #-}
 
-hostRecordingPrinter :: IORef (Maybe (Host WithContext)) -> NOMState -> Maybe Window -> (ZonedTime, Double) -> Text
+hostRecordingPrinter :: IORef (Maybe (Host WithContext)) -> NOMState -> Maybe (Window Int) -> (ZonedTime, Double) -> Text
 hostRecordingPrinter recording state _ _ = UnsafeIO.unsafePerformIO do
   writeIORef recording (hostOf (MkCacheId 0) state)
   pure ""
@@ -606,7 +609,7 @@ summaryText state =
         CSet.size state.fullSummary.plannedBuilds
       )
 
-summaryRecordingPrinter :: IORef (Maybe Text) -> NOMState -> Maybe Window -> (ZonedTime, Double) -> Text
+summaryRecordingPrinter :: IORef (Maybe Text) -> NOMState -> Maybe (Window Int) -> (ZonedTime, Double) -> Text
 summaryRecordingPrinter recording state _ _ = UnsafeIO.unsafePerformIO do
   writeIORef recording (Just (summaryText state))
   pure ""
@@ -620,7 +623,7 @@ touchedInitialState = do
   pure
     base
       { derivationInfos = CMap.insert (MkCacheId 1) derivationInfo base.derivationInfos,
-        touchedIds = CSet.singleton (MkCacheId 1)
+        touchedIds = CSet.fromFoldable [MkCacheId 1]
       }
 
 readIntegrationReplay :: Text -> IO ByteString
@@ -706,7 +709,7 @@ tests = do
           Exception.try @Exception.SomeException
             (Exception.evaluate (parseSourceMap (ByteString.pack [0xff, 0xfe])))
         case outcome of
-          Left exception -> assertBool "the decode error names invalid UTF-8" ("Invalid UTF-8" `Text.isInfixOf` toText (show exception))
+          Left exception -> assertBool "the decode error names invalid UTF-8" ("Invalid UTF-8" `Text.isInfixOf` Text.pack (show exception))
           Right _ -> assertFailure "invalid UTF-8 returned a partial map",
       -- INVENTORY: sourcemap.2.2
       "a completed download is a proxy candidate" ~: do
@@ -977,7 +980,7 @@ tests = do
               maintainState
               pure
               initial
-              (Stream.fromList (ByteString.lines standardReplay))
+              (Stream.fromList (ByteString8.lines standardReplay))
         withNullHandle \handle ->
           void
             $ runJsonProcess
@@ -985,7 +988,7 @@ tests = do
               maintainState
               identityResolve
               initial
-              (Stream.fromList (ByteString.lines standardReplay))
+              (Stream.fromList (ByteString8.lines standardReplay))
         expectedOutput <- readIORef pureOutput
         actualOutput <- readIORef identityOutput
         assertBool "a frame was printed" (isJust expectedOutput)
@@ -1005,7 +1008,7 @@ tests = do
                   initial
                   (Stream.fromList [jsonLine "hello"])
         case outcome of
-          Left exception -> assertBool "the resolver failure escapes" ("resolver boom" `Text.isInfixOf` toText (show exception))
+          Left exception -> assertBool "the resolver failure escapes" ("resolver boom" `Text.isInfixOf` Text.pack (show exception))
           Right _ -> assertFailure "the resolver failure was swallowed",
       -- INVENTORY: io.2.1
       "interact passes its resolve argument through" ~: do
@@ -1148,7 +1151,7 @@ tests = do
             maintainState
             pure
             initial
-            (Stream.fromList (ByteString.lines standardReplay))
+            (Stream.fromList (ByteString8.lines standardReplay))
         assertBool "the standard replay has no running downloads" (CMap.null standardState.fullSummary.runningDownloads)
         assertBool "the standard replay has no completed downloads" (CMap.null standardState.fullSummary.completedDownloads)
         downloadInitial <- baseState
@@ -1172,7 +1175,7 @@ tests = do
             maintainState
             pure
             standardInitial
-            (Stream.fromList (ByteString.lines standardReplay))
+            (Stream.fromList (ByteString8.lines standardReplay))
         assertBool "no planned builds remain" (CSet.null standardState.fullSummary.plannedBuilds)
         assertBool "no running builds remain" (CMap.null standardState.fullSummary.runningBuilds)
         assertEqual "four builds completed" 4 (CMap.size standardState.fullSummary.completedBuilds)
@@ -1183,7 +1186,7 @@ tests = do
             maintainState
             pure
             failInitial
-            (Stream.fromList (ByteString.lines failReplay))
+            (Stream.fromList (ByteString8.lines failReplay))
         assertEqual "one build is planned" 1 (CSet.size failState.fullSummary.plannedBuilds)
         assertEqual "one build failed" 1 (CMap.size failState.fullSummary.failedBuilds)
         assertEqual "no build completed" 0 (CMap.size failState.fullSummary.completedBuilds)
