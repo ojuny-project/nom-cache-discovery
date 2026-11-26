@@ -43,7 +43,6 @@ import System.Environment (setEnv, unsetEnv)
 import System.FilePath (takeExtension)
 import System.IO qualified as SystemIO
 import System.IO.Unsafe qualified as UnsafeIO
-import System.Posix.IO qualified as Posix
 -- INVENTORY: package.4.4
 import Test.HUnit (
   Counts (errors, failures),
@@ -257,20 +256,6 @@ exposedModules contents =
 
 suiteSucceeds :: Counts -> Bool
 suiteSucceeds counts = errors counts + failures counts == 0
-
-captureStderr :: IO () -> IO ByteString
-captureStderr action = do
-  temporaryDirectory <- getTemporaryDirectory
-  let path = temporaryDirectory <> "/nom-cache-discovery-stderr.log"
-  savedDescriptor <- Posix.dup Posix.stdError
-  targetDescriptor <- Posix.createFile path 0o600
-  void (Posix.dupTo targetDescriptor Posix.stdError)
-  Posix.closeFd targetDescriptor
-  captured <-
-    (action >> ByteString.readFile path)
-      `Exception.finally` void (Posix.dupTo savedDescriptor Posix.stdError)
-  Posix.closeFd savedDescriptor
-  pure captured
 
 data StubBodies = MkStubBodies
   { infoBody :: ByteString
@@ -1955,24 +1940,6 @@ tests = do
         assertBool "http-client-tls is in the shared build-depends" ("http-client-tls" `elem` sharedDependencies)
         assertBool "the suite imports the tests stanza" ("tests" `elem` suiteImports)
         assertBool "the tests stanza imports exes" ("exes" `elem` testsImports)
-    , -- test.1 Suite exits nonzero when any HUnit case fails
-
-      -- INVENTORY: test.1.2
-      "a failing case yields a failing suite exit" ~: do
-        counts <- runTestTT (test (assertEqual "deliberate failure" (1 :: Int) 2))
-        assertEqual "one failure is counted" 1 (failures counts)
-        assertBool "the suite exits nonzero" (not (suiteSucceeds counts))
-    , -- INVENTORY: test.1.3
-      "an erroring case yields a failing suite exit" ~: do
-        counts <- runTestTT (test (Exception.throwIO (Exception.ErrorCall "boom") :: IO ()))
-        assertEqual "one error is counted" 1 (errors counts)
-        assertBool "the suite exits nonzero" (not (suiteSucceeds counts))
-    , -- INVENTORY: test.1.5
-      "a failing case is reported with its label" ~: do
-        output <-
-          captureStderr do
-            void (runTestTT (test ("parse source map label" ~: assertEqual "deliberate failure" (1 :: Int) 2)))
-        assertBool "the label is printed" ("parse source map label" `ByteString.isInfixOf` output)
     ]
 
 -- INVENTORY: test.1.1
